@@ -12,8 +12,8 @@ android {
         applicationId = "com.touchstation.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 22
-        versionName = "0.22"
+        versionCode = 50
+        versionName = "0.50"
 
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
