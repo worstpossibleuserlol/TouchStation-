@@ -133,7 +133,7 @@ class MainActivity : ComponentActivity() {
                         Spacer(Modifier.height(8.dp))
                         Text("Designed for modern mobile chipsets, including MediaTek Dimensity. Performance depends on the device and future emulator core.", color = Color(0xFFAFBED0), fontSize = 12.sp)
                         Spacer(Modifier.weight(1f))
-                        Text("TOUCHSTATION 0.1.1 ALPHA  •  CORE INTEGRATION PENDING", color = Color(0xFF71849B), fontSize = 9.sp, letterSpacing = 1.sp)
+                        Text("TOUCHSTATION 0.22 ALPHA  •  CORE INTEGRATION PENDING", color = Color(0xFF71849B), fontSize = 9.sp, letterSpacing = 1.sp)
                     }
                 }
             }
