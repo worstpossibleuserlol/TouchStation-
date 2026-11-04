@@ -7,7 +7,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -43,24 +41,34 @@ class MainActivity : ComponentActivity() {
             val panel = Color(0xFF12243B)
             val cyan = Color(0xFF55D6D0)
             var selectedGame by remember { mutableStateOf<Uri?>(null) }
-            var message by remember {
-                mutableStateOf("Choose a PS1 game image to add it to your library.")
+            var selectedBios by remember { mutableStateOf<Uri?>(null) }
+            var status by remember { mutableStateOf("Add a game image and your own BIOS file to prepare your library.") }
+
+            fun keepPermission(uri: Uri) {
+                try {
+                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (_: SecurityException) {
+                    // The provider may not support persistable document permissions.
+                }
             }
 
             val gamePicker = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.OpenDocument()
             ) { uri ->
                 if (uri != null) {
-                    try {
-                        contentResolver.takePersistableUriPermission(
-                            uri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        )
-                    } catch (_: SecurityException) {
-                        // Some document providers do not offer persistable permissions.
-                    }
+                    keepPermission(uri)
                     selectedGame = uri
-                    message = "Game file selected. The PS1 emulation core is not integrated yet."
+                    status = "Game selected. The PlayStation emulation core is not integrated in this alpha."
+                }
+            }
+
+            val biosPicker = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocument()
+            ) { uri ->
+                if (uri != null) {
+                    keepPermission(uri)
+                    selectedBios = uri
+                    status = "BIOS file selected. TouchStation does not include or distribute BIOS firmware."
                 }
             }
 
@@ -74,119 +82,58 @@ class MainActivity : ComponentActivity() {
             )) {
                 Surface(modifier = Modifier.fillMaxSize(), color = navy) {
                     Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 24.dp, vertical = 28.dp),
-                        horizontalAlignment = Alignment.Start
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 26.dp),
+                        horizontalAlignment = Alignment.Start,
+                        verticalArrangement = Arrangement.Top
                     ) {
-                        Text(
-                            text = "TOUCHSTATION",
-                            color = cyan,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 3.sp
-                        )
+                        Text("TOUCHSTATION", color = cyan, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
                         Spacer(Modifier.height(12.dp))
-                        Text(
-                            text = "Play classics.\nAnywhere.",
-                            color = Color.White,
-                            fontSize = 34.sp,
-                            lineHeight = 40.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            text = "A new home for your PlayStation 1 library.",
-                            color = Color(0xFFAFBED0),
-                            fontSize = 15.sp
-                        )
-                        Spacer(Modifier.height(30.dp))
+                        Text("Your PS1 library.\nOne place.", color = Color.White, fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        Text("A mobile-first PlayStation 1 emulator project.", color = Color(0xFFAFBED0), fontSize = 14.sp)
+                        Spacer(Modifier.height(24.dp))
 
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = panel,
-                            shape = RoundedCornerShape(22.dp)
-                        ) {
-                            Column(Modifier.padding(20.dp)) {
-                                Text(
-                                    text = "GAME LIBRARY",
-                                    color = cyan,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 2.sp
-                                )
+                        Surface(modifier = Modifier.fillMaxWidth(), color = panel, shape = RoundedCornerShape(20.dp)) {
+                            Column(Modifier.padding(18.dp)) {
+                                Text("GAME LIBRARY", color = cyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                                Spacer(Modifier.height(10.dp))
+                                Text(selectedGame?.lastPathSegment ?: "No game selected", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                                 Spacer(Modifier.height(12.dp))
-                                Text(
-                                    text = selectedGame?.lastPathSegment ?: "No game selected",
-                                    color = Color.White,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    text = message,
-                                    color = Color(0xFFAFBED0),
-                                    fontSize = 13.sp
-                                )
+                                Button(
+                                    onClick = { gamePicker.launch(arrayOf("*/*")) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = cyan, contentColor = navy)
+                                ) { Text("ADD GAME FILE", fontWeight = FontWeight.Bold) }
                                 Spacer(Modifier.height(18.dp))
+                                Text("PLAYSTATION BIOS", color = cyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                                Spacer(Modifier.height(10.dp))
+                                Text(selectedBios?.lastPathSegment ?: "No BIOS selected", color = Color.White, fontSize = 15.sp)
+                                Spacer(Modifier.height(12.dp))
                                 Button(
-                                    onClick = {
-                                        gamePicker.launch(
-                                            arrayOf(
-                                                "application/octet-stream",
-                                                "application/x-cue",
-                                                "application/x-iso9660-image",
-                                                "*/*"
-                                            )
-                                        )
-                                    },
+                                    onClick = { biosPicker.launch(arrayOf("*/*")) },
                                     modifier = Modifier.fillMaxWidth(),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = cyan,
-                                        contentColor = navy
-                                    )
-                                ) {
-                                    Text("ADD GAME FILE", fontWeight = FontWeight.Bold)
-                                }
-                                Spacer(Modifier.height(8.dp))
-                                Button(
-                                    onClick = {
-                                        message = "Emulation core integration is still in development. This preview cannot run games yet."
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF263B55),
-                                        contentColor = Color.White
-                                    )
-                                ) {
-                                    Text("START GAME")
-                                }
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF263B55), contentColor = Color.White)
+                                ) { Text("SELECT MY BIOS FILE") }
                             }
                         }
 
-                        Spacer(Modifier.height(24.dp))
-                        Text(
-                            text = "DEVICE TARGET",
-                            color = cyan,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 2.sp
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("ARM64", color = Color.White, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.width(12.dp))
-                            Text("ARM32", color = Color.White, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.width(12.dp))
-                            Text("ANDROID 8+", color = Color.White, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(18.dp))
+                        Surface(modifier = Modifier.fillMaxWidth(), color = Color(0xFF102B36), shape = RoundedCornerShape(16.dp)) {
+                            Column(Modifier.padding(16.dp)) {
+                                Text("PROJECT STATUS", color = cyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                                Spacer(Modifier.height(8.dp))
+                                Text(status, color = Color(0xFFD4E1EC), fontSize = 13.sp)
+                            }
                         }
+
+                        Spacer(Modifier.height(20.dp))
+                        Text("DEVICE TARGET", color = cyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Text("ARM64  •  ARM32  •  ANDROID 8+", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Designed for modern mobile chipsets, including MediaTek Dimensity. Performance depends on the device and future emulator core.", color = Color(0xFFAFBED0), fontSize = 12.sp)
                         Spacer(Modifier.weight(1f))
-                        Text(
-                            text = "TOUCHSTATION 0.1.0 ALPHA  •  FRONTEND PREVIEW",
-                            color = Color(0xFF71849B),
-                            fontSize = 10.sp,
-                            letterSpacing = 1.sp
-                        )
+                        Text("TOUCHSTATION 0.1.1 ALPHA  •  CORE INTEGRATION PENDING", color = Color(0xFF71849B), fontSize = 9.sp, letterSpacing = 1.sp)
                     }
                 }
             }
