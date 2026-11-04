@@ -4,10 +4,10 @@ TouchStation is an Android frontend prototype for a planned PlayStation 1 emulat
 
 ## Current status
 
-**Version:** 0.1.0 Alpha  
-**Status:** Frontend prototype only
+**Version:** 0.1.1 Alpha  
+**Status:** Android frontend prototype; PS1 emulation core not yet integrated.
 
-The current build provides a native Android interface and a document picker for user-provided game images. It does **not** yet emulate or run PlayStation games. A PS1 emulation core, audio/video emulation, BIOS integration, and JNI bridge still need to be implemented.
+The app currently provides a native Android library screen and document pickers for user-provided game images and BIOS files. Selecting a file does not start emulation yet.
 
 ## Build
 
@@ -22,10 +22,10 @@ The artifact is named `TouchStation-debug-APK`. Download the artifact ZIP from t
 - ABIs: `arm64-v8a`, `armeabi-v7a`
 - Application ID: `com.touchstation.app`
 
-## Game files and BIOS
+## BIOS and game files
 
-Only use game images and BIOS files that you are legally entitled to use. BIOS support is not implemented in this frontend preview.
+TouchStation does not include copyrighted PlayStation BIOS firmware or commercial games. Select only files you are legally entitled to use. BIOS selection is currently a frontend feature; BIOS loading by an emulator core is not implemented yet.
 
-## Native core
+## Planned native core
 
-The `app/src/main/cpp` directory documents the planned native integration point. Any future emulator core must be integrated with its license and notices respected.
+A compatible open-source PS1 core still needs to be integrated with its license notices, Android NDK build, JNI bridge, video output, audio output, controller input, and save-state handling. No PS1 games can be run in this alpha.
