@@ -4,7 +4,8 @@ TouchStation is an Android frontend prototype for a planned PlayStation 1 emulat
 
 ## Current status
 
-**Version:** 0.1.1 Alpha  
+**Version:** 0.22 Alpha  
+**Android version code:** 22  
 **Status:** Android frontend prototype; PS1 emulation core not yet integrated.
 
 The app currently provides a native Android library screen and document pickers for user-provided game images and BIOS files. Selecting a file does not start emulation yet.
