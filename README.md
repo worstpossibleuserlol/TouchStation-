@@ -2,33 +2,38 @@
 
 TouchStation is an Android frontend prototype for a planned PlayStation 1 emulator. It targets ARM64 and ARM32 Android devices, including phones using MediaTek Dimensity processors.
 
-## Current status
+## Version 0.99
 
-**Version:** 0.50 Alpha  
-**Android version code:** 50  
-**Status:** Android frontend prototype; PS1 emulation core not yet integrated.
+- Native Android library and settings screens.
+- Grey #999999 interface with white typography.
+- Locally saved preferences for compatibility, graphics, audio, controls, system, save data, library and advanced settings.
+- User-selected game image and BIOS file locations are remembered.
+- Launcher artwork is the TouchStation grey-and-white wordmark.
 
-Version 0.50 adds the TouchStation grey-and-white wordmark as the Android launcher icon and updates the app version identifiers.
+## Emulator status
 
-The app currently provides a native Android library screen and document pickers for user-provided game images and BIOS files. Selecting a file does not start emulation yet.
+**This build is still a frontend prototype. A PS1 emulation core is not integrated.** The settings screens save preferences locally, but those preferences are not applied to game execution yet. Selecting a BIOS or game file does not start a game.
 
-## Build
-
-The GitHub Actions workflow **Build TouchStation debug APK** builds a debug APK when manually started from the Actions tab or when relevant source files are pushed to the main branch.
-
-The artifact is named `TouchStation-debug-APK`. Download the artifact ZIP from the completed workflow run and extract `app-debug.apk`.
+A complete PS1 emulator still needs a compatible emulation core and integration for:
+- MIPS R3000A CPU execution, timing, interrupts and DMA.
+- GPU command processing, texture/framebuffer handling, display timing and video output.
+- SPU audio, CD-ROM controller, CD audio, and synchronization.
+- BIOS loading, region selection and legal firmware handling.
+- Game-disc parsing including track layouts, cue sheets, multi-disc playlists and supported compressed formats.
+- Digital and DualShock input, touch controls, USB/Bluetooth gamepads, analog axes and vibration.
+- Two memory-card ports, virtual memory-card files, save states and safe persistence.
+- Per-game compatibility profiles, renderer backends, scaling, frame pacing and diagnostics.
+- Android lifecycle handling, audio focus, storage permissions, thermal/performance behavior and device testing.
 
 ## Android targets
 
 - Minimum Android version: Android 8.0 (API 26)
 - Target SDK: 35
-- ABIs: `arm64-v8a`, `armeabi-v7a`
-- Application ID: `com.touchstation.app`
+- ABIs: arm64-v8a, armeabi-v7a
+- Application ID: com.touchstation.app
 
-## BIOS and game files
+## Build
 
-TouchStation does not include copyrighted PlayStation BIOS firmware or commercial games. Select only files you are legally entitled to use. BIOS selection is currently a frontend feature; BIOS loading by an emulator core is not implemented yet.
+The GitHub Actions workflow Build TouchStation debug APK builds a debug APK when manually started or when relevant source files are pushed to the main branch. The artifact is named TouchStation-debug-APK.
 
-## Planned native core
-
-A compatible open-source PS1 core still needs to be integrated with its license notices, Android NDK build, JNI bridge, video output, audio output, controller input, and save-state handling. No PS1 games can be run in this alpha.
+TouchStation does not bundle commercial games or PlayStation BIOS firmware. Use only files you are legally entitled to use.
