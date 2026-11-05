@@ -1,11 +1,11 @@
 # TouchStation
 
-TouchStation is an Android PlayStation 1 emulator frontend. Version **1.00 Alpha** bundles the PCSX-ReARMed libretro core for ARM64 and ARM32 Android devices.
+TouchStation is an Android PlayStation 1 emulator frontend. Version **1.00 Alpha** bundles the PCSX-ReARMed libretro core for ARM64, ARM32, x86-64 and x86 Android devices.
 
 ## Version 1.00 Alpha
 
 - Bundled PCSX-ReARMed PS1 core (CPU, GPU, CD-ROM and SPU emulation).
-- Android NDK builds for `arm64-v8a` and `armeabi-v7a`.
+- Android NDK builds for `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86`.
 - Native libretro bridge for video frames, stereo audio, controller input, core options and save states.
 - Charcoal `#333333` and white interface sampled from the TouchStation launcher logo.
 - Game file import and whole-disc-folder import for CUE/BIN and multi-disc layouts.
@@ -43,8 +43,8 @@ PCSX-ReARMed can fall back to its built-in HLE BIOS when an external BIOS is una
 
 ## Build
 
-The GitHub Actions workflow builds the pinned PCSX-ReARMed core with the Android NDK for both ABIs, packages the native libraries, and then builds the debug APK.
+The GitHub Actions workflow builds the pinned PCSX-ReARMed core with the Android NDK for all four Android ABIs, packages the native libraries, and then builds the debug APK.
 
 A local build requires Android SDK 35, Android NDK `27.2.12479018`, CMake `3.22.1`, Gradle, Git, and the PCSX-ReARMed source checked out with its submodules at the pinned commit. Place the source at `third_party/pcsx_rearmed` before running `gradle assembleDebug`.
 
-The universal APK contains both ARM core libraries. Its actual size is reported by the build; TouchStation does not add filler data just to inflate the package.
+The universal APK contains the four ARM and x86 core libraries. Its actual size is reported by the build; TouchStation does not add filler data just to inflate the package.

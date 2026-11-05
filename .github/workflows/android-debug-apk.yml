@@ -43,7 +43,7 @@ jobs:
           git -C third_party/pcsx_rearmed checkout 7838055e892061f3f5775ff9f6bb3d3d9c7fe742
           git -C third_party/pcsx_rearmed submodule update --init deps/libchdr deps/libretro-common deps/lightning deps/lightrec deps/mman frontend/libpicofe frontend/warm
 
-      - name: Build the PS1 core for ARM64 and ARM32
+      - name: Build the PS1 core for ARM and x86 Android
         run: |
           set -euo pipefail
           SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
@@ -51,7 +51,7 @@ jobs:
           ANDROID_NDK_HOME="$SDK_ROOT/ndk/27.2.12479018"
           test -x "$ANDROID_NDK_HOME/ndk-build"
           CORE_DIR="$GITHUB_WORKSPACE/third_party/pcsx_rearmed"
-          for ABI in arm64-v8a armeabi-v7a; do
+          for ABI in arm64-v8a armeabi-v7a x86_64 x86; do
             echo "Building PCSX-ReARMed for $ABI"
             (cd "$CORE_DIR/jni" && "$ANDROID_NDK_HOME/ndk-build" -j2 APP_ABI="$ABI" USE_LIBRETRO_VFS=0)
             mkdir -p "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI"

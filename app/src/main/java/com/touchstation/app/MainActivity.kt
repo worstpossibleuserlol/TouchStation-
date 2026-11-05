@@ -538,7 +538,11 @@ private fun EmulatorScreen(gamePath: String, saveDirectory: File, onExit: () -> 
     var pausedUi by remember { mutableStateOf(false) }
     val gameFile = File(gamePath)
     val stateDirectory = remember { File(saveDirectory, "states").apply { mkdirs() } }
-    val stateFile = remember { File(stateDirectory, gameFile.nameWithoutExtension.replace(Regex("[^A-Za-z0-9_-]"), "_") + ".state") }
+    val gameStateKey = remember(gamePath) {
+        gameFile.nameWithoutExtension.replace(Regex("[^A-Za-z0-9_-]"), "_")
+    }
+    var stateSlot by remember(gamePath) { mutableStateOf(1) }
+    val stateFile = File(stateDirectory, "${gameStateKey}_slot${stateSlot}.state")
 
     DisposableEffect(gamePath) {
         val worker = Thread({
@@ -619,6 +623,12 @@ private fun EmulatorScreen(gamePath: String, saveDirectory: File, onExit: () -> 
             modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black).border(1.dp, White, RoundedCornerShape(4.dp))
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("SAVE SLOT $stateSlot / 10", color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            SecondaryAction("NEXT SLOT") {
+                stateSlot = if (stateSlot >= 10) 1 else stateSlot + 1
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             SecondaryAction(if (pausedUi) "RESUME" else "PAUSE") {
                 pausedUi = !pausedUi
                 paused.set(pausedUi)
@@ -626,11 +636,11 @@ private fun EmulatorScreen(gamePath: String, saveDirectory: File, onExit: () -> 
             SecondaryAction("RESET") { CoreBridge.reset() }
             SecondaryAction("SAVE STATE") {
                 val ok = CoreBridge.saveState(stateFile.absolutePath)
-                Toast.makeText(context, if (ok) "Save state created" else "Save state failed", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, if (ok) "Saved slot $stateSlot" else "Save state failed", Toast.LENGTH_SHORT).show()
             }
             SecondaryAction("LOAD STATE") {
                 val ok = stateFile.exists() && CoreBridge.loadState(stateFile.absolutePath)
-                Toast.makeText(context, if (ok) "Save state loaded" else "No valid save state", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, if (ok) "Loaded slot $stateSlot" else "Slot $stateSlot is empty or invalid", Toast.LENGTH_SHORT).show()
             }
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
