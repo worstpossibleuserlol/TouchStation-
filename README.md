@@ -1,13 +1,13 @@
 # TouchStation
 
-TouchStation is an Android PlayStation 1 emulator frontend. Version **1.00 Alpha** bundles the PCSX-ReARMed libretro core for ARM64, ARM32, x86-64 and x86 Android devices.
+TouchStation is an Android PlayStation 1 emulator frontend. Version **1.0.1 Alpha** bundles the PCSX-ReARMed libretro core for ARM64, ARM32, x86-64 and x86 Android devices.
 
 ## Version 1.00 Alpha
 
 - Bundled PCSX-ReARMed PS1 core (CPU, GPU, CD-ROM and SPU emulation).
 - Android NDK builds for `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86`.
 - Native libretro bridge for video frames, stereo audio, controller input, core options and save states.
-- Charcoal `#333333` and white interface sampled from the TouchStation launcher logo.
+- Slate `#111923` interface with muted teal `#63C6B2` accents, a refreshed game library and redesigned in-game quick menu/controller layout.
 - Game file import and whole-disc-folder import for CUE/BIN and multi-disc layouts.
 - External BIOS import into the app's private system directory.
 - On-screen directional pad and PlayStation face buttons.
@@ -38,8 +38,8 @@ PCSX-ReARMed can fall back to its built-in HLE BIOS when an external BIOS is una
 - Target SDK: 35
 - ABIs: `arm64-v8a`, `armeabi-v7a`
 - Application ID: `com.touchstation.app`
-- Version code: `100`
-- Version name: `1.00 Alpha`
+- Version code: `101`
+- Version name: `1.0.1 Alpha`
 
 ## Build
 
