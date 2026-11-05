@@ -379,6 +379,18 @@ Java_com_touchstation_app_CoreBridge_nativeSetAnalog(JNIEnv*, jobject, jint stic
     gAnalog[stick][axis].store(static_cast<int16_t>(clamped), std::memory_order_release);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_touchstation_app_CoreBridge_nativeSetControllerMode(JNIEnv*, jobject, jint mode) {
+    if (!gInitialized || !pSetController) return;
+    unsigned device = RETRO_DEVICE_JOYPAD;
+    if (mode == 1) {
+        device = RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 0);
+    } else if (mode == 2) {
+        device = RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 1);
+    }
+    pSetController(0, device);
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_touchstation_app_CoreBridge_nativeReadAudio(JNIEnv* env, jobject, jshortArray output,
                                                       jint maxFrames) {
