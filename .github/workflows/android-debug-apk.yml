@@ -3,6 +3,10 @@ name: Build TouchStation 1.0.1 Alpha APK
 permissions:
   contents: write
 
+concurrency:
+  group: touchstation-android-build
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
