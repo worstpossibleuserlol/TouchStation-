@@ -18,6 +18,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import android.content.pm.ActivityInfo
+import android.view.WindowManager
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -136,6 +142,26 @@ class MainActivity : ComponentActivity() {
             var selectedBios by remember { mutableStateOf(prefs.getString("bios_name", null)) }
             var status by remember { mutableStateOf(if (coreReady) "PCSX-ReARMed core ready." else "Native core failed to load. Check the build output.") }
             var selectedTab by remember { mutableStateOf("Library") }
+            var drawerOpen by remember { mutableStateOf(false) }
+            var searchExpanded by remember { mutableStateOf(false) }
+            var searchQuery by remember { mutableStateOf("") }
+            var gridView by remember { mutableStateOf(false) }
+            var libraryFilter by remember { mutableStateOf("All Games") }
+            var gameLibrary by remember { mutableStateOf(scanImportedGames()) }
+
+            DisposableEffect(playerGame) {
+                if (playerGame != null) {
+                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                    window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                } else {
+                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                }
+                onDispose {
+                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                }
+            }
             var playerGame by remember { mutableStateOf<String?>(null) }
             var coreAvailable by remember { mutableStateOf(coreReady) }
 
@@ -156,6 +182,7 @@ class MainActivity : ComponentActivity() {
                         .onSuccess { file ->
                             if (file != null) {
                                 selectedGame = file.absolutePath
+                                gameLibrary = scanImportedGames()
                                 prefs.edit().putString("game_path", file.absolutePath).apply()
                                 status = if (file.extension.equals("cue", true) || file.extension.equals("m3u", true)) {
                                     "Disc list imported. Import its whole folder when it references other tracks."
@@ -174,6 +201,7 @@ class MainActivity : ComponentActivity() {
                         .onSuccess { file ->
                             if (file != null) {
                                 selectedGame = file.absolutePath
+                                gameLibrary = scanImportedGames()
                                 prefs.edit().putString("game_path", file.absolutePath).apply()
                                 status = "Game folder imported. Selected ${file.name}."
                             } else {
@@ -219,73 +247,197 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     } else {
-                        Column(modifier = Modifier.fillMaxSize().background(ScreenGrey).padding(horizontal = 18.dp, vertical = 16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                        Box(modifier = Modifier.fillMaxSize().background(ScreenGrey)) {
+                            Column(
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Column {
-                                    Text("TOUCHSTATION", color = White, fontSize = 21.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
-                                    Text("PLAYSTATION • GAME LIBRARY", color = SoftWhite, fontSize = 9.sp, letterSpacing = 1.5.sp)
-                                }
-                                Surface(color = AccentDark, shape = RoundedCornerShape(50)) {
-                                    Text("1.0.1 ALPHA", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
-                                }
-                            }
-                            Spacer(Modifier.height(20.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
-                                TopTab("GAMES", selectedTab == "Library", Modifier.weight(1f)) { selectedTab = "Library" }
-                                TopTab("SETTINGS", selectedTab == "Settings", Modifier.weight(1f)) { selectedTab = "Settings" }
-                            }
-                            Spacer(Modifier.height(16.dp))
-                            if (selectedTab == "Library") {
-                                LibraryScreen(
-                                    selectedGame = selectedGame,
-                                    selectedBios = selectedBios,
-                                    status = status,
-                                    coreAvailable = coreAvailable,
-                                    onAddGame = { gameFilePicker.launch(arrayOf("*/*")) },
-                                    onImportFolder = { gameFolderPicker.launch(null) },
-                                    onSelectBios = { biosPicker.launch(arrayOf("*/*")) },
-                                    onStart = {
-                                        val path = selectedGame
-                                        if (path.isNullOrBlank()) {
-                                            status = "Import a game first."
-                                        } else if (!coreAvailable) {
-                                            status = "PCSX-ReARMed is unavailable in this build."
-                                        } else {
-                                            val ready = CoreBridge.initialize(systemDirectory.absolutePath, saveDirectory.absolutePath)
-                                            val loaded = ready && CoreBridge.loadGame(path)
-                                            if (loaded) playerGame = path else status = "The core could not load this file. Check the format and disc files."
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    SecondaryAction("☰") { drawerOpen = true }
+                                    if (searchExpanded) {
+                                        BasicTextField(
+                                            value = searchQuery,
+                                            onValueChange = { searchQuery = it },
+                                            modifier = Modifier.weight(1f).padding(horizontal = 7.dp),
+                                            singleLine = true,
+                                            textStyle = TextStyle(color = White, fontSize = 16.sp),
+                                            decorationBox = { innerTextField ->
+                                                Box {
+                                                    if (searchQuery.isBlank()) Text("Search games…", color = SoftWhite, fontSize = 16.sp)
+                                                    innerTextField()
+                                                }
+                                            }
+                                        )
+                                    } else {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text("All Games", color = White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                                            Text("TOUCHSTATION  •  1.0.1 ALPHA", color = SoftWhite, fontSize = 9.sp, letterSpacing = 1.1.sp)
                                         }
                                     }
-                                )
-                            } else {
-                                SettingsScreen(
-                                    prefs = prefs,
-                                    coreAvailable = coreAvailable,
-                                    onReset = {
-                                        prefs.edit().apply {
-                                            coreOptions.forEach { remove(it.key) }
-                                            remove("controller_mode")
-                                        }.apply()
-                                        coreOptions.forEach { CoreBridge.setOption(it.key, it.defaultValue) }
-                                        CoreBridge.setControllerMode(0)
-                                        status = "Core settings restored. Game library and BIOS selection were kept."
+                                    SecondaryAction(if (searchExpanded) "CLOSE" else "SEARCH") {
+                                        searchExpanded = !searchExpanded
+                                        if (!searchExpanded) searchQuery = ""
                                     }
+                                    SecondaryAction(if (gridView) "LIST" else "GRID") { gridView = !gridView }
+                                }
+
+                                if (selectedTab == "Library") {
+                                    LibraryScreen(
+                                        games = gameLibrary,
+                                        selectedGame = selectedGame,
+                                        selectedBios = selectedBios,
+                                        searchQuery = searchQuery,
+                                        libraryFilter = libraryFilter,
+                                        gridView = gridView,
+                                        status = status,
+                                        coreAvailable = coreAvailable,
+                                        onSelectGame = { file ->
+                                            selectedGame = file.absolutePath
+                                            prefs.edit().putString("game_path", file.absolutePath).apply()
+                                            status = "Selected ${file.name}."
+                                        },
+                                        onAddGame = { gameFilePicker.launch(arrayOf("*/*")) },
+                                        onImportFolder = { gameFolderPicker.launch(null) },
+                                        onSelectBios = { biosPicker.launch(arrayOf("*/*")) },
+                                        onStart = {
+                                            val path = selectedGame
+                                            if (path.isNullOrBlank()) {
+                                                status = "Import a game first."
+                                            } else if (!coreAvailable) {
+                                                status = "PCSX-ReARMed is unavailable in this build."
+                                            } else {
+                                                val ready = CoreBridge.initialize(systemDirectory.absolutePath, saveDirectory.absolutePath)
+                                                val loaded = ready && CoreBridge.loadGame(path)
+                                                if (loaded) playerGame = path else status = "The core could not load this file. Check the format and disc files."
+                                            }
+                                        }
+                                    )
+                                } else {
+                                    SettingsScreen(
+                                        prefs = prefs,
+                                        coreAvailable = coreAvailable,
+                                        onReset = {
+                                            prefs.edit().apply {
+                                                coreOptions.forEach { remove(it.key) }
+                                                remove("controller_mode")
+                                            }.apply()
+                                            coreOptions.forEach { CoreBridge.setOption(it.key, it.defaultValue) }
+                                            CoreBridge.setControllerMode(0)
+                                            status = "Core settings restored. Game library and BIOS selection were kept."
+                                        }
+                                    )
+                                }
+
+                                Text(
+                                    if (coreAvailable) "PCSX-REARMED CORE READY" else "NATIVE CORE UNAVAILABLE",
+                                    color = if (coreAvailable) Accent else SoftWhite,
+                                    fontSize = 9.sp,
+                                    letterSpacing = 0.8.sp
                                 )
                             }
-                            Spacer(Modifier.height(10.dp))
-                            Text(
-                                if (coreAvailable) "PCSX-REARMED CORE READY" else "NATIVE CORE UNAVAILABLE",
-                                color = if (coreAvailable) Accent else SoftWhite, fontSize = 9.sp, letterSpacing = 0.8.sp
-                            )
+
+                            if (drawerOpen) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.58f))
+                                        .clickable { drawerOpen = false }
+                                )
+                                Surface(
+                                    modifier = Modifier.align(Alignment.CenterStart)
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(0.82f),
+                                    color = PanelGrey,
+                                    shape = RoundedCornerShape(topEnd = 22.dp, bottomEnd = 22.dp),
+                                    border = BorderStroke(1.dp, BorderGrey)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                                            .padding(horizontal = 18.dp, vertical = 20.dp),
+                                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                                    ) {
+                                        Text("TOUCHSTATION", color = White, fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
+                                        Text("GAME LIBRARY", color = Accent, fontSize = 10.sp, letterSpacing = 1.3.sp)
+                                        DrawerItem("All Games", libraryFilter == "All Games") {
+                                            libraryFilter = "All Games"; selectedTab = "Library"; drawerOpen = false
+                                        }
+                                        DrawerItem("Discs", libraryFilter == "Discs") {
+                                            libraryFilter = "Discs"; selectedTab = "Library"; drawerOpen = false
+                                        }
+                                        DrawerItem("Playlists", libraryFilter == "Playlists") {
+                                            libraryFilter = "Playlists"; selectedTab = "Library"; drawerOpen = false
+                                        }
+                                        DrawerItem("Executables", libraryFilter == "Executables") {
+                                            libraryFilter = "Executables"; selectedTab = "Library"; drawerOpen = false
+                                        }
+                                        Spacer(Modifier.height(4.dp))
+                                        Surface(Modifier.fillMaxWidth().height(1.dp), color = BorderGrey) {}
+                                        DrawerItem("Start File") {
+                                            drawerOpen = false
+                                            gameFilePicker.launch(arrayOf("*/*"))
+                                        }
+                                        DrawerItem("Start BIOS") {
+                                            drawerOpen = false
+                                            biosPicker.launch(arrayOf("*/*"))
+                                        }
+                                        Spacer(Modifier.height(4.dp))
+                                        Surface(Modifier.fillMaxWidth().height(1.dp), color = BorderGrey) {}
+                                        DrawerItem("App Settings") {
+                                            selectedTab = "Settings"; drawerOpen = false
+                                        }
+                                        DrawerItem("Controller Settings") {
+                                            selectedTab = "Settings"; drawerOpen = false
+                                        }
+                                        DrawerItem("Reset Settings") {
+                                            prefs.edit().apply {
+                                                coreOptions.forEach { remove(it.key) }
+                                                remove("controller_mode")
+                                            }.apply()
+                                            coreOptions.forEach { CoreBridge.setOption(it.key, it.defaultValue) }
+                                            CoreBridge.setControllerMode(0)
+                                            status = "Default settings restored. Imported games and BIOS were kept."
+                                            drawerOpen = false
+                                        }
+                                        Spacer(Modifier.height(4.dp))
+                                        Surface(Modifier.fillMaxWidth().height(1.dp), color = BorderGrey) {}
+                                        DrawerItem("Scan for New Games") {
+                                            gameLibrary = scanImportedGames()
+                                            status = "Scanned TouchStation's imported game folder."
+                                            drawerOpen = false
+                                        }
+                                        DrawerItem("Rescan All Games") {
+                                            gameLibrary = scanImportedGames()
+                                            status = "Game library refreshed."
+                                            drawerOpen = false
+                                        }
+                                        DrawerItem("Memory Card Data") {
+                                            selectedTab = "Settings"
+                                            status = "Memory cards are stored in the app's private save directory."
+                                            drawerOpen = false
+                                        }
+                                        Spacer(Modifier.height(8.dp))
+                                        Text("VERSION 1.0.1 ALPHA", color = SoftWhite, fontSize = 10.sp, letterSpacing = 1.sp)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    private fun scanImportedGames(): List<File> {
+        val supportedLaunchFiles = setOf("cue", "iso", "img", "chd", "pbp", "m3u", "mdf", "toc", "ccd", "cbn", "exe")
+        val root = File(filesDir, "games")
+        if (!root.exists()) return emptyList()
+        return root.walkTopDown()
+            .filter { it.isFile && it.extension.lowercase() in supportedLaunchFiles }
+            .sortedBy { it.name.lowercase() }
+            .toList()
     }
 
     private fun displayName(uri: Uri): String {
@@ -418,70 +570,173 @@ private fun TopTab(label: String, selected: Boolean, modifier: Modifier, onClick
 
 @Composable
 private fun LibraryScreen(
+    games: List<File>,
     selectedGame: String?,
     selectedBios: String?,
+    searchQuery: String,
+    libraryFilter: String,
+    gridView: Boolean,
     status: String,
     coreAvailable: Boolean,
+    onSelectGame: (File) -> Unit,
     onAddGame: () -> Unit,
     onImportFolder: () -> Unit,
     onSelectBios: () -> Unit,
     onStart: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("All Games", color = White, fontSize = 29.sp, fontWeight = FontWeight.Bold)
-            Text("Your PlayStation collection", color = SoftWhite, fontSize = 13.sp)
+    val filteredGames = games.filter { file ->
+        val extension = file.extension.lowercase()
+        val typeMatches = when (libraryFilter) {
+            "Discs" -> extension in setOf("cue", "bin", "iso", "img", "chd", "pbp", "mdf", "toc", "ccd", "cbn")
+            "Playlists" -> extension == "m3u"
+            "Executables" -> extension == "exe"
+            else -> true
         }
-        Panel {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(
-                    modifier = Modifier.size(54.dp).background(AccentDark, RoundedCornerShape(13.dp)).border(1.dp, Accent.copy(alpha = 0.55f), RoundedCornerShape(13.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("TS", color = Accent, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                }
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("GAME LIBRARY", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
-                    Text(if (selectedGame != null) File(selectedGame).nameWithoutExtension else "No games added yet", color = White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
-                    Text(selectedGame?.let { File(it).extension.uppercase() + " • Imported" } ?: "Add a disc image or game folder to begin", color = SoftWhite, fontSize = 11.sp)
-                }
+        typeMatches && file.name.contains(searchQuery, ignoreCase = true)
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(libraryFilter, color = White, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+                Text("${filteredGames.size} imported item(s)", color = SoftWhite, fontSize = 12.sp)
             }
-            Spacer(Modifier.height(14.dp))
-            PrimaryAction("PLAY SELECTED GAME", onStart, enabled = coreAvailable && selectedGame != null)
+            Surface(color = AccentDark, shape = RoundedCornerShape(50)) {
+                Text("PS1", color = Accent, fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp))
+            }
+        }
+
+        Panel {
+            Text("CURRENT GAME", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
             Spacer(Modifier.height(7.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                Box(modifier = Modifier.weight(1f)) { SecondaryAction("ADD GAME FILE", onAddGame) }
-                Box(modifier = Modifier.weight(1f)) { SecondaryAction("IMPORT FOLDER", onImportFolder) }
+            Text(selectedGame?.let { File(it).name } ?: "No game selected", color = White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(if (selectedGame == null) "Choose a title below or import a disc image." else "Ready to launch with the bundled PCSX-ReARMed core.", color = SoftWhite, fontSize = 11.sp)
+            Spacer(Modifier.height(10.dp))
+            PrimaryAction("START GAME", onStart, enabled = coreAvailable && !selectedGame.isNullOrBlank())
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+                SecondaryAction("ADD FILE") { onAddGame() }
+                SecondaryAction("IMPORT FOLDER") { onImportFolder() }
             }
-            Spacer(Modifier.height(5.dp))
-            Text("CUE · BIN · CHD · ISO · IMG · PBP · M3U and other core-supported formats", color = SoftWhite, fontSize = 10.sp)
         }
-        Text("SYSTEM STATUS", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
-        Panel {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("PCSX-ReARMed", color = White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Text(if (coreAvailable) "Native emulation core loaded" else "Core library unavailable", color = SoftWhite, fontSize = 11.sp)
-                }
-                Text(if (coreAvailable) "READY" else "OFFLINE", color = if (coreAvailable) Accent else SoftWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+
+        Text("YOUR COLLECTION", color = SoftWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+        if (filteredGames.isEmpty()) {
+            Panel {
+                Text("No games found here yet", color = White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (games.isEmpty()) "Import a CUE, CHD, ISO, PBP or M3U file. For CUE/BIN games, import the complete disc folder."
+                    else "No imported files match this filter or search.",
+                    color = SoftWhite,
+                    fontSize = 11.sp
+                )
+                Spacer(Modifier.height(6.dp))
+                SecondaryAction("IMPORT GAME FILE") { onAddGame() }
             }
-            Spacer(Modifier.height(9.dp))
+        } else if (gridView) {
+            filteredGames.chunked(2).forEach { pair ->
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    pair.forEach { file ->
+                        GameLibraryItem(
+                            file = file,
+                            selected = file.absolutePath == selectedGame,
+                            grid = true,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onSelectGame(file) }
+                        )
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        } else {
+            filteredGames.forEach { file ->
+                GameLibraryItem(
+                    file = file,
+                    selected = file.absolutePath == selectedGame,
+                    grid = false,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onSelectGame(file) }
+                )
+            }
+        }
+
+        Panel {
+            Text("BIOS FIRMWARE", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+            Spacer(Modifier.height(6.dp))
+            Text(selectedBios ?: "No external BIOS imported", color = White, fontSize = 13.sp)
+            Text("No BIOS or commercial game is bundled. The core can use its HLE fallback when a compatible BIOS is absent.", color = SoftWhite, fontSize = 11.sp)
+            Spacer(Modifier.height(6.dp))
+            SecondaryAction("SELECT BIOS FILE") { onSelectBios() }
+        }
+
+        Panel {
+            Text("CORE STATUS", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+            Spacer(Modifier.height(5.dp))
+            Text(if (coreAvailable) "PCSX-ReARMed is ready" else "Native core unavailable", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             Text(status, color = SoftWhite, fontSize = 11.sp)
         }
-        Panel {
-            Text("BIOS FIRMWARE", color = White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(4.dp))
-            Text(selectedBios ?: "No external BIOS selected", color = SoftWhite, fontSize = 12.sp)
-            Spacer(Modifier.height(9.dp))
-            SecondaryAction("IMPORT BIOS FILE", onSelectBios)
-            Spacer(Modifier.height(5.dp))
-            Text("Use firmware you are legally entitled to use. No BIOS or commercial games are bundled.", color = SoftWhite, fontSize = 10.sp)
+    }
+}
+
+@Composable
+private fun GameLibraryItem(
+    file: File,
+    selected: Boolean,
+    grid: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        color = if (selected) AccentDark else PanelGrey,
+        shape = RoundedCornerShape(13.dp),
+        border = BorderStroke(1.dp, if (selected) Accent else BorderGrey)
+    ) {
+        if (grid) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("◉", color = Accent, fontSize = 24.sp)
+                Text(file.nameWithoutExtension, color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
+                Text("${file.extension.uppercase()}  •  ${(file.length() / (1024 * 1024)).coerceAtLeast(1)} MB", color = SoftWhite, fontSize = 9.sp)
+                Text(if (selected) "SELECTED" else "TAP TO SELECT", color = if (selected) Accent else SoftWhite, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(color = if (selected) Accent else DarkGrey, shape = RoundedCornerShape(50)) {
+                    Text("◉", color = if (selected) DarkGrey else Accent, fontSize = 18.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(file.nameWithoutExtension, color = White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    Text("${file.extension.uppercase()}  •  ${(file.length() / (1024 * 1024)).coerceAtLeast(1)} MB", color = SoftWhite, fontSize = 10.sp)
+                }
+                Text(if (selected) "✓" else "›", color = Accent, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+            }
         }
-        Panel {
-            Text("MEMORY CARDS & SAVE STATES", color = White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(4.dp))
-            Text("In-game memory card saves and emulator save states are stored separately in the app's private storage.", color = SoftWhite, fontSize = 11.sp)
-        }
+    }
+}
+
+@Composable
+private fun DrawerItem(label: String, selected: Boolean = false, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .background(if (selected) AccentDark else Color.Transparent, RoundedCornerShape(11.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 13.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(if (selected) "◉" else "○", color = Accent, fontSize = 16.sp)
+        Spacer(Modifier.size(12.dp))
+        Text(label, color = if (selected) White else SoftWhite, fontSize = 14.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
     }
 }
 
@@ -560,6 +815,8 @@ private fun EmulatorScreen(gamePath: String, saveDirectory: File, onExit: () -> 
     val paused = remember { AtomicBoolean(false) }
     var pausedUi by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
+    var controllerMode by remember { mutableStateOf(0) }
+    val controllerLabels = listOf("Digital", "Analog", "DualShock")
     val gameFile = File(gamePath)
     val stateDirectory = remember { File(saveDirectory, "states").apply { mkdirs() } }
     val gameStateKey = remember(gamePath) {
@@ -623,51 +880,34 @@ private fun EmulatorScreen(gamePath: String, saveDirectory: File, onExit: () -> 
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(ScreenGrey).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(gameFile.nameWithoutExtension, color = White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text("PCSX-ReARMed  •  PS1", color = SoftWhite, fontSize = 10.sp)
-            }
-            SecondaryAction(if (pausedUi) "RESUME" else "PAUSE") {
-                pausedUi = !pausedUi
-                paused.set(pausedUi)
-            }
-            Spacer(Modifier.size(5.dp))
-            SecondaryAction("MENU") { menuOpen = !menuOpen }
-        }
-        if (menuOpen) {
-            Panel {
-                Text("QUICK MENU", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                Spacer(Modifier.height(7.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    Box(Modifier.weight(1f)) {
-                        SecondaryAction("RESET") { CoreBridge.reset(); menuOpen = false }
-                    }
-                    Box(Modifier.weight(1f)) {
-                        SecondaryAction("SAVE STATE") {
-                            val ok = CoreBridge.saveState(stateFile.absolutePath)
-                            Toast.makeText(context, if (ok) "Saved slot $stateSlot" else "Save state failed", Toast.LENGTH_SHORT).show()
-                            menuOpen = false
-                        }
-                    }
-                    Box(Modifier.weight(1f)) {
-                        SecondaryAction("LOAD STATE") {
-                            val ok = stateFile.exists() && CoreBridge.loadState(stateFile.absolutePath)
-                            Toast.makeText(context, if (ok) "Loaded slot $stateSlot" else "Slot $stateSlot is empty or invalid", Toast.LENGTH_SHORT).show()
-                            menuOpen = false
-                        }
-                    }
-                }
-                Spacer(Modifier.height(7.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("SAVE SLOT  $stateSlot / 10", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    SecondaryAction("NEXT SLOT") { stateSlot = if (stateSlot >= 10) 1 else stateSlot + 1 }
-                    SecondaryAction("EXIT GAME") { onExit() }
-                }
-            }
-        }
-        Box(modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black, RoundedCornerShape(8.dp)).border(1.dp, BorderGrey, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+    fun pauseGame() {
+        pausedUi = true
+        paused.set(true)
+    }
+
+    fun resumeGame() {
+        pausedUi = false
+        paused.set(false)
+        menuOpen = false
+    }
+
+    fun saveCurrentState() {
+        val ok = CoreBridge.saveState(stateFile.absolutePath)
+        Toast.makeText(context, if (ok) "Saved slot $stateSlot" else "Save state failed", Toast.LENGTH_SHORT).show()
+    }
+
+    fun loadCurrentState() {
+        val ok = stateFile.exists() && CoreBridge.loadState(stateFile.absolutePath)
+        Toast.makeText(context, if (ok) "Loaded slot $stateSlot" else "Slot $stateSlot is empty or invalid", Toast.LENGTH_SHORT).show()
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF080E14))) {
+        Box(
+            modifier = Modifier.fillMaxHeight(0.70f).aspectRatio(4f / 3f)
+                .align(Alignment.Center)
+                .background(Color.Black, RoundedCornerShape(8.dp))
+                .border(1.dp, BorderGrey, RoundedCornerShape(8.dp))
+        ) {
             AndroidView(
                 factory = { viewContext ->
                     SurfaceView(viewContext).apply {
@@ -683,39 +923,114 @@ private fun EmulatorScreen(gamePath: String, saveDirectory: File, onExit: () -> 
                 },
                 modifier = Modifier.fillMaxSize()
             )
-            if (pausedUi) {
-                Surface(color = ScreenGrey.copy(alpha = 0.88f), shape = RoundedCornerShape(12.dp)) {
-                    Text("PAUSED", color = Accent, fontSize = 15.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp, modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp))
+            if (pausedUi && !menuOpen) {
+                Surface(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = Color(0xDD101923),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Accent)
+                ) {
+                    Text("PAUSED", color = White, fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
                 }
             }
         }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+
+        Row(
+            modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            SecondaryAction("MENU") {
+                pauseGame()
+                menuOpen = true
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(gameFile.nameWithoutExtension, color = White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text("PCSX-ReARMed  •  4:3 DISPLAY", color = SoftWhite, fontSize = 9.sp, letterSpacing = 0.7.sp)
+            }
+            SecondaryAction("SLOT $stateSlot") { stateSlot = if (stateSlot >= 10) 1 else stateSlot + 1 }
+            SecondaryAction("EXIT") { onExit() }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxSize().padding(start = 10.dp, end = 10.dp, top = 58.dp, bottom = 58.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 PadButton("▲", 4)
-                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     PadButton("◀", 6)
                     PadButton("▼", 5)
                     PadButton("▶", 7)
                 }
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     PadButton("△", 1)
                     PadButton("○", 0)
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     PadButton("□", 9)
                     PadButton("×", 8)
                 }
             }
         }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            PadButton("L1", 10)
+
+        Row(
+            modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(horizontal = 8.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             PadButton("L2", 12)
+            PadButton("L1", 10)
             PadButton("SELECT", 2)
             PadButton("START", 3)
-            PadButton("R2", 13)
             PadButton("R1", 11)
+            PadButton("R2", 13)
+            SecondaryAction(if (pausedUi) "RESUME" else "PAUSE") {
+                if (pausedUi) resumeGame() else pauseGame()
+            }
+        }
+
+        if (menuOpen) {
+            Box(
+                modifier = Modifier.fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.68f))
+                    .clickable { menuOpen = false; resumeGame() }
+            )
+            Surface(
+                modifier = Modifier.align(Alignment.CenterStart).fillMaxHeight().fillMaxWidth(0.78f),
+                color = PanelGrey,
+                shape = RoundedCornerShape(topEnd = 20.dp, bottomEnd = 20.dp),
+                border = BorderStroke(1.dp, BorderGrey)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("CONSOLE MENU", color = White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                    Text(gameFile.name, color = SoftWhite, fontSize = 11.sp, maxLines = 2)
+                    Spacer(Modifier.height(5.dp))
+                    DrawerItem("Resume Game") { resumeGame() }
+                    DrawerItem("Save State  •  Slot $stateSlot") { saveCurrentState() }
+                    DrawerItem("Load State  •  Slot $stateSlot") { loadCurrentState() }
+                    DrawerItem("Next Save Slot") {
+                        stateSlot = if (stateSlot >= 10) 1 else stateSlot + 1
+                    }
+                    DrawerItem("Controller Mode  •  ${controllerLabels[controllerMode]}") {
+                        controllerMode = (controllerMode + 1) % controllerLabels.size
+                        CoreBridge.setControllerMode(controllerMode)
+                    }
+                    DrawerItem("Reset Console") {
+                        CoreBridge.reset()
+                        Toast.makeText(context, "Console reset", Toast.LENGTH_SHORT).show()
+                    }
+                    Spacer(Modifier.height(5.dp))
+                    Surface(Modifier.fillMaxWidth().height(1.dp), color = BorderGrey) {}
+                    DrawerItem("Exit Game") { onExit() }
+                }
+            }
         }
     }
 }
