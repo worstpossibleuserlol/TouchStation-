@@ -40,7 +40,7 @@ jobs:
         run: |
           git clone https://github.com/notaz/pcsx_rearmed.git third_party/pcsx_rearmed
           git -C third_party/pcsx_rearmed checkout 7838055e892061f3f5775ff9f6bb3d3d9c7fe742
-          git -C third_party/pcsx_rearmed submodule update --init --recursive
+          git -C third_party/pcsx_rearmed submodule update --init deps/libchdr deps/libretro-common deps/lightning deps/lightrec deps/mman frontend/libpicofe frontend/warm
 
       - name: Build the PS1 core for ARM64 and ARM32
         run: |
