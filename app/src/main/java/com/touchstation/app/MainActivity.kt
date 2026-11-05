@@ -68,25 +68,51 @@ private val DarkGrey = Color(0xFF626262)
 private val White = Color(0xFFFFFFFF)
 private val SoftWhite = Color(0xFFF1F1F1)
 
+private data class CoreChoice(val value: String, val label: String = value)
+
 private data class CoreOption(
+    val category: String,
     val title: String,
     val description: String,
     val key: String,
-    val choices: List<String>,
+    val choices: List<CoreChoice>,
     val defaultValue: String
 )
 
+private fun choice(value: String, label: String = value) = CoreChoice(value, label)
+
 private val coreOptions = listOf(
-    CoreOption("Dynamic recompiler", "Uses native CPU code generation for higher speed. Interpreter mode is slower but can help diagnose compatibility problems.", "pcsx_rearmed_drc", listOf("enabled", "disabled"), "enabled"),
-    CoreOption("CPU clock", "Leave on Auto for normal timing. Manual values can cause game speed or compatibility issues.", "pcsx_rearmed_psxclock", listOf("Auto", "70", "80", "90", "100"), "Auto"),
-    CoreOption("Console region", "Auto follows the game region. NTSC and PAL can be forced for testing.", "pcsx_rearmed_region", listOf("Auto", "NTSC", "PAL"), "Auto"),
-    CoreOption("CD read-ahead", "Reads disc sectors ahead to reduce loading stalls. Larger values use more memory.", "pcsx_rearmed_cd_readahead", listOf("12", "16", "32", "64", "128"), "12"),
-    CoreOption("Frameskip", "Can reduce audio crackling on slower devices, at the cost of visual smoothness.", "pcsx_rearmed_frameskip_type", listOf("disabled", "Auto", "Auto (Threshold)", "Fixed Interval"), "disabled"),
-    CoreOption("Dithering", "Controls the PlayStation color dithering effect.", "pcsx_rearmed_dithering", listOf("disabled", "enabled", "Force"), "enabled"),
-    CoreOption("Threaded rendering", "Runs supported graphics work on a separate thread. Auto lets the core decide.", "pcsx_rearmed_gpu_thread_rendering", listOf("Auto", "disabled", "enabled"), "Auto"),
-    CoreOption("Enhanced resolution", "Renders at a higher internal resolution on supported NEON builds. It can reduce performance.", "pcsx_rearmed_neon_enhancement_enable", listOf("disabled", "enabled"), "disabled"),
-    CoreOption("32-bit color output", "Improves color depth in some modes but increases memory bandwidth use.", "pcsx_rearmed_rgb32_output", listOf("disabled", "enabled"), "disabled"),
-    CoreOption("Memory card slot 2", "Choose whether the second virtual memory card is shared, per-game, or disabled.", "pcsx_rearmed_memcard2", listOf("Shared Between All Games", "Game Code (Serial)", "No Memory Card"), "Shared Between All Games")
+    CoreOption("SYSTEM & COMPATIBILITY", "Console region", "Auto detects the region from the game. Forcing the wrong region can change game speed.", "pcsx_rearmed_region", listOf(choice("auto", "Auto"), choice("NTSC"), choice("PAL")), "auto"),
+    CoreOption("SYSTEM & COMPATIBILITY", "BIOS selection", "Use a compatible BIOS from your system folder, or choose HLE when a BIOS is unavailable.", "pcsx_rearmed_bios", listOf(choice("auto", "Auto / external BIOS"), choice("HLE", "HLE BIOS")), "auto"),
+    CoreOption("SYSTEM & COMPATIBILITY", "BIOS boot logo", "Shows the BIOS startup logo. Some titles are less compatible when this is enabled.", "pcsx_rearmed_show_bios_bootlogo", listOf(choice("disabled", "Off"), choice("enabled", "On"), choice("enabled_no_pcsx", "On, no branding")), "disabled"),
+    CoreOption("SYSTEM & COMPATIBILITY", "Dynamic recompiler", "Uses native CPU code generation for higher speed. Disable only when troubleshooting compatibility.", "pcsx_rearmed_drc", listOf(choice("enabled", "Enabled"), choice("disabled", "Disabled / interpreter")), "enabled"),
+    CoreOption("SYSTEM & COMPATIBILITY", "PS1 CPU clock", "Auto is recommended. Manual clock values can cause timing errors, slow motion or game hangs.", "pcsx_rearmed_psxclock", listOf(choice("auto", "Auto"), choice("57", "57%"), choice("70", "70%"), choice("80", "80%"), choice("90", "90%"), choice("100", "100%")), "auto"),
+    CoreOption("SYSTEM & COMPATIBILITY", "Instruction cache emulation", "Improves accuracy for a few games. Support is partial with ARM dynamic recompilers.", "pcsx_rearmed_icache_emulation", listOf(choice("enabled", "Enabled"), choice("disabled", "Disabled")), "enabled"),
+
+    CoreOption("DISC & CD AUDIO", "CD read-ahead", "Reads disc sectors ahead to reduce loading stalls. Higher values use more memory.", "pcsx_rearmed_cd_readahead", listOf(choice("12"), choice("16"), choice("32"), choice("64"), choice("128")), "12"),
+    CoreOption("DISC & CD AUDIO", "CD audio tracks", "Enable CD-DA music tracks. Disable only if a game has audio-related performance issues.", "pcsx_rearmed_nocdaudio", listOf(choice("enabled", "Enabled"), choice("disabled", "Disabled")), "enabled"),
+    CoreOption("DISC & CD AUDIO", "XA audio decoding", "Enable XA streamed audio used by many PS1 games and FMV sequences.", "pcsx_rearmed_noxadecoding", listOf(choice("enabled", "Enabled"), choice("disabled", "Disabled")), "enabled"),
+
+    CoreOption("GRAPHICS", "Frameskip", "Skips frames to reduce audio crackling on slower devices. Visual motion becomes less smooth.", "pcsx_rearmed_frameskip_type", listOf(choice("disabled", "Off"), choice("auto", "Auto"), choice("auto_threshold", "Auto threshold"), choice("fixed_interval", "Fixed interval")), "disabled"),
+    CoreOption("GRAPHICS", "Frameskip threshold", "Used only with Auto threshold frameskip. A lower value skips less often.", "pcsx_rearmed_frameskip_threshold", listOf(choice("15", "15%"), choice("24", "24%"), choice("33", "33%"), choice("45", "45%"), choice("60", "60%"), choice("75", "75%")), "33"),
+    CoreOption("GRAPHICS", "Dithering", "Reproduces the PlayStation's original color dithering pattern.", "pcsx_rearmed_dithering", listOf(choice("disabled", "Off"), choice("enabled", "On"), choice("force", "Force")), "enabled"),
+    CoreOption("GRAPHICS", "Threaded rendering", "Moves supported GPU work to another thread. Auto lets the core choose.", "pcsx_rearmed_gpu_thread_rendering", listOf(choice("auto", "Auto"), choice("disabled", "Disabled"), choice("enabled", "Enabled")), "auto"),
+    CoreOption("GRAPHICS", "Enhanced resolution", "Renders supported 3D games at a higher internal resolution. This costs performance.", "pcsx_rearmed_neon_enhancement_enable", listOf(choice("disabled", "Off"), choice("enabled", "On")), "disabled"),
+    CoreOption("GRAPHICS", "32-bit color output", "Improves color depth in some scenes but increases CPU and memory bandwidth use.", "pcsx_rearmed_rgb32_output", listOf(choice("disabled", "Off"), choice("enabled", "On")), "disabled"),
+    CoreOption("GRAPHICS", "High-resolution downscaling", "Downscales 480i/512i output to 320x240. Useful only on some displays.", "pcsx_rearmed_scale_hires", listOf(choice("disabled", "Off"), choice("enabled", "On")), "disabled"),
+    CoreOption("GRAPHICS", "GPU linked-list accuracy", "Auto-detects when slower, more accurate linked-list processing is needed.", "pcsx_rearmed_gpu_slow_llists", listOf(choice("auto", "Auto"), choice("disabled", "Disabled"), choice("enabled", "Enabled")), "auto"),
+    CoreOption("GRAPHICS", "Internal FPS display", "Requests the core's internal frame-rate overlay. Frontend notifications may be required.", "pcsx_rearmed_display_fps_v2", listOf(choice("disabled", "Off"), choice("enabled", "On"), choice("extra", "Extended")), "disabled"),
+
+    CoreOption("AUDIO", "SPU reverb", "Emulates the PlayStation sound processor's reverb effect. Disable to reduce audio processing.", "pcsx_rearmed_spu_reverb", listOf(choice("enabled", "Enabled"), choice("disabled", "Disabled")), "enabled"),
+    CoreOption("AUDIO", "Sound interpolation", "Gaussian is closest to original hardware. Simple is lighter; cubic is more demanding.", "pcsx_rearmed_spu_interpolation", listOf(choice("simple", "Simple"), choice("gaussian", "Gaussian"), choice("cubic", "Cubic"), choice("off", "Off")), "simple"),
+    CoreOption("AUDIO", "Threaded SPU", "Runs the sound processor on another thread. Disable it if a game develops audio glitches.", "pcsx_rearmed_spu_thread", listOf(choice("disabled", "Disabled"), choice("enabled", "Enabled")), "disabled"),
+
+    CoreOption("INPUT & MULTIPLAYER", "Multitap", "Enables extra virtual controller ports for compatible five- or eight-player games.", "pcsx_rearmed_multitap", listOf(choice("disabled", "Off"), choice("port 1", "Port 1"), choice("port 2", "Port 2"), choice("ports 1 and 2", "Ports 1 and 2")), "disabled"),
+    CoreOption("INPUT & MULTIPLAYER", "Analog stick bounds", "Square bounds can improve diagonal response with some physical controllers.", "pcsx_rearmed_analog_axis_modifier", listOf(choice("circle", "Circle"), choice("square", "Square")), "square"),
+    CoreOption("INPUT & MULTIPLAYER", "DualShock vibration", "Enables rumble for compatible gamepads when the DualShock controller mode is selected.", "pcsx_rearmed_vibration", listOf(choice("enabled", "Enabled"), choice("disabled", "Disabled")), "enabled"),
+
+    CoreOption("MEMORY CARDS", "Memory card slot 1", "Choose the save format used for card 1. Game Code files are useful for moving saves between emulators.", "pcsx_rearmed_memcard1", listOf(choice("libretro", "Libretro default"), choice("serial", "Game code / serial"), choice("shared", "Shared file"), choice("none", "Disabled")), "libretro"),
+    CoreOption("MEMORY CARDS", "Memory card slot 2", "Choose the save format used for the second virtual memory card.", "pcsx_rearmed_memcard2", listOf(choice("serial", "Game code / serial"), choice("shared", "Shared file"), choice("none", "Disabled")), "shared")
 )
 
 class MainActivity : ComponentActivity() {
@@ -112,9 +138,13 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 coreOptions.forEach { option ->
-                    val value = prefs.getString(option.key, option.defaultValue) ?: option.defaultValue
+                    val allowed = option.choices.map { it.value }
+                    val saved = prefs.getString(option.key, option.defaultValue) ?: option.defaultValue
+                    val value = saved.takeIf { it in allowed } ?: option.defaultValue
                     CoreBridge.setOption(option.key, value)
                 }
+                val controllerMode = prefs.getInt("controller_mode", 0).coerceIn(0, 2)
+                CoreBridge.setControllerMode(controllerMode)
             }
 
             val gameFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -231,9 +261,13 @@ class MainActivity : ComponentActivity() {
                                     prefs = prefs,
                                     coreAvailable = coreAvailable,
                                     onReset = {
-                                        prefs.edit().clear().apply()
+                                        prefs.edit().apply {
+                                            coreOptions.forEach { remove(it.key) }
+                                            remove("controller_mode")
+                                        }.apply()
                                         coreOptions.forEach { CoreBridge.setOption(it.key, it.defaultValue) }
-                                        status = "Core settings restored to defaults."
+                                        CoreBridge.setControllerMode(0)
+                                        status = "Core settings restored. Game library and BIOS selection were kept."
                                     }
                                 )
                             }
@@ -436,22 +470,41 @@ private fun SettingsScreen(
 ) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Settings", color = White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Text("These options are passed to PCSX-ReARMed through its libretro interface.", color = SoftWhite, fontSize = 12.sp)
+        Text("Core settings are passed to PCSX-ReARMed. Changes take effect as the core reads its options; some require a game reload.", color = SoftWhite, fontSize = 12.sp)
         if (!coreAvailable) {
-            Panel { Text("The native core did not load. Core options will be applied after a valid build is installed.", color = White, fontSize = 12.sp) }
+            Panel { Text("The native core did not load. Core options are unavailable until the native libraries load successfully.", color = White, fontSize = 12.sp) }
         }
-        Text("CPU & COMPATIBILITY", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        coreOptions.take(5).forEach { CoreOptionCard(it, prefs) }
-        Text("GRAPHICS", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        coreOptions.drop(5).take(4).forEach { CoreOptionCard(it, prefs) }
-        Text("SAVE DATA", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        CoreOptionCard(coreOptions.last(), prefs)
+        ControllerModeCard(prefs)
+        val categories = listOf("SYSTEM & COMPATIBILITY", "DISC & CD AUDIO", "GRAPHICS", "AUDIO", "INPUT & MULTIPLAYER", "MEMORY CARDS")
+        categories.forEach { category ->
+            Text(category, color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            coreOptions.filter { it.category == category }.forEach { CoreOptionCard(it, prefs) }
+        }
         Panel {
             Text("LICENSE & SOURCE", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(5.dp))
-            Text("PCSX-ReARMed is GPL-2.0. Source and license details are listed in the project README.", color = SoftWhite, fontSize = 11.sp)
+            Text("PCSX-ReARMed is GPL-2.0. The pinned source revision and full license are included in the project repository.", color = SoftWhite, fontSize = 11.sp)
         }
         SecondaryAction("RESTORE DEFAULT CORE SETTINGS", onReset)
+    }
+}
+
+@Composable
+private fun ControllerModeCard(prefs: android.content.SharedPreferences) {
+    var selected by remember { mutableStateOf(prefs.getInt("controller_mode", 0).coerceIn(0, 2)) }
+    val labels = listOf("Digital", "Analog", "DualShock")
+    Panel {
+        Text("Controller mode", color = White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Text("Choose the emulated PS1 controller type. DualShock enables analog controls in compatible games.", color = SoftWhite, fontSize = 11.sp)
+        Spacer(Modifier.height(7.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(labels[selected], color = White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            SecondaryAction("CHANGE") {
+                selected = (selected + 1) % labels.size
+                prefs.edit().putInt("controller_mode", selected).apply()
+                CoreBridge.setControllerMode(selected)
+            }
+        }
     }
 }
 
@@ -460,15 +513,16 @@ private fun CoreOptionCard(option: CoreOption, prefs: android.content.SharedPref
     var selected by remember(option.key) {
         mutableStateOf(prefs.getString(option.key, option.defaultValue) ?: option.defaultValue)
     }
-    val index = option.choices.indexOf(selected).let { if (it < 0) 0 else it }
+    val index = option.choices.indexOfFirst { it.value == selected }.let { if (it < 0) 0 else it }
+    val selectedLabel = option.choices[index].label
     Panel {
         Text(option.title, color = White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         Text(option.description, color = SoftWhite, fontSize = 11.sp)
         Spacer(Modifier.height(7.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(selected, color = White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(selectedLabel, color = White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             SecondaryAction("CHANGE") {
-                selected = option.choices[(index + 1) % option.choices.size]
+                selected = option.choices[(index + 1) % option.choices.size].value
                 prefs.edit().putString(option.key, selected).apply()
                 CoreBridge.setOption(option.key, selected)
             }
