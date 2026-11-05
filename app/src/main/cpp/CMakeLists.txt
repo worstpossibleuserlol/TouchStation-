@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(touchstation_jni LANGUAGES C CXX)
+
+if(NOT DEFINED PCSX_SOURCE_DIR)
+    message(FATAL_ERROR "PCSX_SOURCE_DIR is required. The build workflow downloads the pinned PCSX-ReARMed source.")
+endif()
+
+set(LIBRETRO_INCLUDE "${PCSX_SOURCE_DIR}/deps/libretro-common/include")
+if(NOT EXISTS "${LIBRETRO_INCLUDE}/libretro.h")
+    message(FATAL_ERROR "libretro.h was not found. Check out PCSX-ReARMed with its submodules.")
+endif()
+
+add_library(touchstation_jni SHARED touchstation_jni.cpp)
+target_include_directories(touchstation_jni PRIVATE "${LIBRETRO_INCLUDE}")
+target_compile_features(touchstation_jni PRIVATE cxx_std_17)
+target_compile_options(touchstation_jni PRIVATE -Wall -Wextra -Wno-unused-parameter)
+find_library(android-lib android)
+find_library(log-lib log)
+find_library(dl-lib dl)
+target_link_libraries(touchstation_jni PRIVATE ${android-lib} ${log-lib} ${dl-lib})
