@@ -114,3 +114,23 @@ jobs:
           fi
           git commit -m "Add TouchStation 1.00 Alpha APK"
           git push origin HEAD:main
+
+      - name: Create GitHub release and upload APK asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          APK="downloaded-apk/app-debug.apk"
+          if [ ! -f "$APK" ]; then
+            APK="$(find downloaded-apk -type f -name '*.apk' -print -quit)"
+          fi
+          test -n "$APK"
+          gh release view v1.00-alpha >/dev/null 2>&1 && EXISTS=1 || EXISTS=0
+          if [ "$EXISTS" -eq 1 ]; then
+            gh release upload v1.00-alpha "$APK" --clobber
+          else
+            gh release create v1.00-alpha "$APK" \
+              --target "$GITHUB_SHA" \
+              --title "TouchStation 1.00 Alpha" \
+              --notes "TouchStation 1.00 Alpha Android build. Includes the bundled PCSX-ReARMed core for ARM64, ARM32, x86-64 and x86. Import your own legally obtained PS1 BIOS and game files."
+          fi
