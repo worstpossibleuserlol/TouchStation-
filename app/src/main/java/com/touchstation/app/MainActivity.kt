@@ -725,8 +725,8 @@ private fun PadButton(label: String, id: Int) {
     Box(
         modifier = Modifier
             .size(width = if (label.length > 3) 52.dp else 48.dp, height = 42.dp)
-            .background(DarkGrey, RoundedCornerShape(8.dp))
-            .border(1.dp, White.copy(alpha = 0.65f), RoundedCornerShape(8.dp))
+            .background(PanelGrey, RoundedCornerShape(12.dp))
+            .border(1.dp, Accent.copy(alpha = 0.55f), RoundedCornerShape(12.dp))
             .pointerInput(id) {
                 detectTapGestures(onPress = {
                     CoreBridge.setButton(id, true)
