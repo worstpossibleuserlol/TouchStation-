@@ -148,6 +148,8 @@ class MainActivity : ComponentActivity() {
             var gridView by remember { mutableStateOf(false) }
             var libraryFilter by remember { mutableStateOf("All Games") }
             var gameLibrary by remember { mutableStateOf(scanImportedGames()) }
+            var playerGame by remember { mutableStateOf<String?>(null) }
+            var coreAvailable by remember { mutableStateOf(coreReady) }
 
             DisposableEffect(playerGame) {
                 if (playerGame != null) {
@@ -162,9 +164,6 @@ class MainActivity : ComponentActivity() {
                     window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
                 }
             }
-            var playerGame by remember { mutableStateOf<String?>(null) }
-            var coreAvailable by remember { mutableStateOf(coreReady) }
-
             LaunchedEffect(Unit) {
                 coreOptions.forEach { option ->
                     val allowed = option.choices.map { it.value }
