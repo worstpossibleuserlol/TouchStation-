@@ -356,10 +356,10 @@ class MainActivity : ComponentActivity() {
             KeyEvent.KEYCODE_DPAD_DOWN -> 5
             KeyEvent.KEYCODE_DPAD_LEFT -> 6
             KeyEvent.KEYCODE_DPAD_RIGHT -> 7
-            KeyEvent.KEYCODE_BUTTON_A -> 0
-            KeyEvent.KEYCODE_BUTTON_B -> 8
-            KeyEvent.KEYCODE_BUTTON_X -> 1
-            KeyEvent.KEYCODE_BUTTON_Y -> 9
+            KeyEvent.KEYCODE_BUTTON_A -> 8
+            KeyEvent.KEYCODE_BUTTON_B -> 0
+            KeyEvent.KEYCODE_BUTTON_X -> 9
+            KeyEvent.KEYCODE_BUTTON_Y -> 1
             KeyEvent.KEYCODE_BUTTON_L1 -> 10
             KeyEvent.KEYCODE_BUTTON_R1 -> 11
             KeyEvent.KEYCODE_BUTTON_L2 -> 12
@@ -644,12 +644,12 @@ private fun EmulatorScreen(gamePath: String, saveDirectory: File, onExit: () -> 
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    PadButton("△", 9)
-                    PadButton("○", 8)
+                    PadButton("△", 1)
+                    PadButton("○", 0)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    PadButton("□", 1)
-                    PadButton("×", 0)
+                    PadButton("□", 9)
+                    PadButton("×", 8)
                 }
             }
         }
