@@ -30,6 +30,7 @@ object CoreBridge {
     fun runFrame() = nativeRunFrame()
     fun setSurface(surface: Surface?) = nativeSetSurface(surface)
     fun setButton(id: Int, pressed: Boolean) = nativeSetButton(id, pressed)
+    fun setControllerMode(mode: Int) = nativeSetControllerMode(mode.coerceIn(0, 2))
     fun setAnalog(stick: Int, axis: Int, value: Int) = nativeSetAnalog(stick, axis, value.coerceIn(-32767, 32767))
     fun readAudio(buffer: ShortArray, maxFrames: Int): Int = nativeReadAudio(buffer, maxFrames)
     fun sampleRate(): Int = nativeGetSampleRate().coerceIn(22050, 96000)
@@ -44,6 +45,7 @@ object CoreBridge {
     private external fun nativeRunFrame()
     private external fun nativeSetSurface(surface: Surface?)
     private external fun nativeSetButton(id: Int, pressed: Boolean)
+    private external fun nativeSetControllerMode(mode: Int)
     private external fun nativeSetAnalog(stick: Int, axis: Int, value: Int)
     private external fun nativeReadAudio(buffer: ShortArray, maxFrames: Int): Int
     private external fun nativeGetSampleRate(): Int
