@@ -43,10 +43,12 @@ jobs:
           git -C third_party/pcsx_rearmed submodule update --init --recursive
 
       - name: Build the PS1 core for ARM64 and ARM32
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/27.2.12479018
         run: |
           set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -n "$SDK_ROOT"
+          ANDROID_NDK_HOME="$SDK_ROOT/ndk/27.2.12479018"
+          test -x "$ANDROID_NDK_HOME/ndk-build"
           CORE_DIR="$GITHUB_WORKSPACE/third_party/pcsx_rearmed"
           for ABI in arm64-v8a armeabi-v7a; do
             echo "Building PCSX-ReARMed for $ABI"
