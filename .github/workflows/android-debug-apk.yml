@@ -10,6 +10,7 @@ on:
       - '**/*.cpp'
       - '**/*.h'
       - '**/*.xml'
+      - '**/*.webp'
       - '.github/workflows/android-debug-apk.yml'
       - 'README.md'
 

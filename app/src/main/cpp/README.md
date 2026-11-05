@@ -1,5 +1,9 @@
 # Native emulation core
 
-This directory is reserved for the native PS1 emulation core and JNI bridge.
+TouchStation's Android frontend loads the bundled PCSX-ReARMed libretro core through `touchstation_jni.cpp`.
 
-No CPU, GPU, SPU, CD-ROM, BIOS, or game execution core is included in this alpha frontend. A future integration must preserve the selected core's license notices and provide a compliant Android/NDK build.
+The Android workflow checks out the pinned upstream PCSX-ReARMed source, builds `libretro.so` with the Android NDK for `arm64-v8a` and `armeabi-v7a`, then packages the binaries as `libpcsx_rearmed.so`.
+
+The JNI adapter provides libretro callbacks for video output, stereo audio, joypad and analog input, core options, memory directories, reset, and serialized save states. The upstream core supplies the PS1 CPU, GPU, CD-ROM, SPU, and peripheral emulation.
+
+The core is distributed under GPL-2.0. See `THIRD_PARTY_LICENSES/PCSX-ReARMed-COPYING` and the upstream source at https://github.com/notaz/pcsx_rearmed. No BIOS firmware or commercial games are bundled.
