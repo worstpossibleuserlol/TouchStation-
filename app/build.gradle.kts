@@ -7,16 +7,31 @@ plugins {
 android {
     namespace = "com.touchstation.app"
     compileSdk = 35
+    ndkVersion = "27.2.12479018"
 
     defaultConfig {
         applicationId = "com.touchstation.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 99
-        versionName = "0.99"
+        versionCode = 100
+        versionName = "1.00 Alpha"
 
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments += "-DPCSX_SOURCE_DIR=${rootProject.projectDir}/third_party/pcsx_rearmed"
+                cppFlags += "-std=c++17"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 
@@ -47,5 +62,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.documentfile:documentfile:1.0.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
