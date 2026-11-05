@@ -54,7 +54,9 @@ jobs:
             echo "Building PCSX-ReARMed for $ABI"
             (cd "$CORE_DIR/jni" && "$ANDROID_NDK_HOME/ndk-build" -j2 APP_ABI="$ABI" USE_LIBRETRO_VFS=0)
             mkdir -p "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI"
-            cp "$CORE_DIR/jni/libs/$ABI/libretro.so" "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI/libpcsx_rearmed.so"
+            CORE_SO="$(find "$CORE_DIR" -type f -path "*/$ABI/libretro.so" -print -quit)"
+            test -n "$CORE_SO"
+            cp "$CORE_SO" "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI/libpcsx_rearmed.so"
           done
           echo "Bundled core sizes:"
           du -h app/src/main/jniLibs/*/libpcsx_rearmed.so
