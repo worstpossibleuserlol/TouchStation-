@@ -410,8 +410,8 @@ private fun TopTab(label: String, selected: Boolean, modifier: Modifier, onClick
         modifier = modifier.height(43.dp),
         shape = RoundedCornerShape(10.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) White else DarkGrey,
-            contentColor = if (selected) DarkGrey else White
+            containerColor = if (selected) Accent else PanelGrey,
+            contentColor = if (selected) ScreenGrey else White
         )
     ) { Text(label, fontWeight = FontWeight.Bold) }
 }
@@ -500,7 +500,7 @@ private fun SettingsScreen(
         ControllerModeCard(prefs)
         val categories = listOf("SYSTEM & COMPATIBILITY", "DISC & CD AUDIO", "GRAPHICS", "AUDIO", "INPUT & MULTIPLAYER", "MEMORY CARDS")
         categories.forEach { category ->
-            Text(category, color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text(category, color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
             coreOptions.filter { it.category == category }.forEach { CoreOptionCard(it, prefs) }
         }
         Panel {
@@ -722,7 +722,7 @@ private fun Panel(content: @Composable androidx.compose.foundation.layout.Column
         modifier = Modifier.fillMaxWidth(),
         color = PanelGrey,
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, Color(0xFFAAAAAA))
+        border = BorderStroke(1.dp, BorderGrey)
     ) {
         Column(modifier = Modifier.padding(13.dp), content = content)
     }
@@ -735,7 +735,7 @@ private fun PrimaryAction(label: String, onClick: () -> Unit, enabled: Boolean =
         enabled = enabled,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = White, contentColor = DarkGrey, disabledContainerColor = DarkGrey, disabledContentColor = SoftWhite)
+        colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = ScreenGrey, disabledContainerColor = PanelGrey, disabledContentColor = SoftWhite)
     ) { Text(label, fontWeight = FontWeight.Bold) }
 }
 
@@ -744,6 +744,6 @@ private fun SecondaryAction(label: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         shape = RoundedCornerShape(9.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = DarkGrey, contentColor = White)
+        colors = ButtonDefaults.buttonColors(containerColor = DarkGrey, contentColor = Accent)
     ) { Text(label, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
 }
