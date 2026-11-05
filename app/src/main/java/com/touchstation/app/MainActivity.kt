@@ -9,6 +9,8 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.widget.Toast
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.activity.ComponentActivity
@@ -312,6 +314,48 @@ class MainActivity : ComponentActivity() {
         val candidates = destination.walkTopDown().filter { it.isFile }.toList()
         val preferred = listOf("m3u", "cue", "chd", "pbp", "iso", "img", "mdf", "ccd", "bin", "cbn", "exe")
         return preferred.asSequence().mapNotNull { ext -> candidates.firstOrNull { it.extension.equals(ext, true) } }.firstOrNull()
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val button = when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP -> 4
+            KeyEvent.KEYCODE_DPAD_DOWN -> 5
+            KeyEvent.KEYCODE_DPAD_LEFT -> 6
+            KeyEvent.KEYCODE_DPAD_RIGHT -> 7
+            KeyEvent.KEYCODE_BUTTON_A -> 0
+            KeyEvent.KEYCODE_BUTTON_B -> 8
+            KeyEvent.KEYCODE_BUTTON_X -> 1
+            KeyEvent.KEYCODE_BUTTON_Y -> 9
+            KeyEvent.KEYCODE_BUTTON_L1 -> 10
+            KeyEvent.KEYCODE_BUTTON_R1 -> 11
+            KeyEvent.KEYCODE_BUTTON_L2 -> 12
+            KeyEvent.KEYCODE_BUTTON_R2 -> 13
+            KeyEvent.KEYCODE_BUTTON_SELECT -> 2
+            KeyEvent.KEYCODE_BUTTON_START -> 3
+            KeyEvent.KEYCODE_BUTTON_THUMBL -> 14
+            KeyEvent.KEYCODE_BUTTON_THUMBR -> 15
+            else -> null
+        }
+        if (button != null && (event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP)) {
+            CoreBridge.setButton(button, event.action == KeyEvent.ACTION_DOWN)
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (event.isFromSource(android.view.InputDevice.SOURCE_JOYSTICK) && event.action == MotionEvent.ACTION_MOVE) {
+            fun axis(value: Float): Int {
+                val adjusted = if (kotlin.math.abs(value) < 0.12f) 0f else value.coerceIn(-1f, 1f)
+                return (adjusted * 32767f).toInt()
+            }
+            CoreBridge.setAnalog(0, 0, axis(event.getAxisValue(MotionEvent.AXIS_X)))
+            CoreBridge.setAnalog(0, 1, axis(event.getAxisValue(MotionEvent.AXIS_Y)))
+            CoreBridge.setAnalog(1, 0, axis(event.getAxisValue(MotionEvent.AXIS_Z)))
+            CoreBridge.setAnalog(1, 1, axis(event.getAxisValue(MotionEvent.AXIS_RZ)))
+            return true
+        }
+        return super.dispatchGenericMotionEvent(event)
     }
 
     override fun onDestroy() {
