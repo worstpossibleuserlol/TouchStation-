@@ -62,11 +62,11 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 
-private val ScreenGrey = Color(0xFF999999)
-private val PanelGrey = Color(0xFF858585)
-private val DarkGrey = Color(0xFF626262)
+private val ScreenGrey = Color(0xFF333333)
+private val PanelGrey = Color(0xFF424242)
+private val DarkGrey = Color(0xFF242424)
 private val White = Color(0xFFFFFFFF)
-private val SoftWhite = Color(0xFFF1F1F1)
+private val SoftWhite = Color(0xFFE5E5E5)
 
 private data class CoreChoice(val value: String, val label: String = value)
 
