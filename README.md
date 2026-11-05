@@ -1,39 +1,50 @@
 # TouchStation
 
-TouchStation is an Android frontend prototype for a planned PlayStation 1 emulator. It targets ARM64 and ARM32 Android devices, including phones using MediaTek Dimensity processors.
+TouchStation is an Android PlayStation 1 emulator frontend. Version **1.00 Alpha** bundles the PCSX-ReARMed libretro core for ARM64 and ARM32 Android devices.
 
-## Version 0.99
+## Version 1.00 Alpha
 
-- Native Android library and settings screens.
-- Grey #999999 interface with white typography.
-- Locally saved preferences for compatibility, graphics, audio, controls, system, save data, library and advanced settings.
-- User-selected game image and BIOS file locations are remembered.
-- Launcher artwork is the TouchStation grey-and-white wordmark.
+- Bundled PCSX-ReARMed PS1 core (CPU, GPU, CD-ROM and SPU emulation).
+- Android NDK builds for `arm64-v8a` and `armeabi-v7a`.
+- Native libretro bridge for video frames, stereo audio, controller input, core options and save states.
+- Grey `#999999` interface with white text.
+- Game file import and whole-disc-folder import for CUE/BIN and multi-disc layouts.
+- External BIOS import into the app's private system directory.
+- On-screen directional pad and PlayStation face buttons.
+- In-game pause, reset, save-state and load-state controls.
+- Settings wired to PCSX-ReARMed options: dynamic recompiler, CPU clock, region, CD read-ahead, frameskip, dithering, threaded rendering, enhanced resolution, RGB32 output and memory card slot 2.
+- Memory-card data stored in the app's private save directory.
 
-## Emulator status
+## Upstream core and license
 
-**This build is still a frontend prototype. A PS1 emulation core is not integrated.** The settings screens save preferences locally, but those preferences are not applied to game execution yet. Selecting a BIOS or game file does not start a game.
+TouchStation bundles **PCSX-ReARMed** from:
 
-A complete PS1 emulator still needs a compatible emulation core and integration for:
-- MIPS R3000A CPU execution, timing, interrupts and DMA.
-- GPU command processing, texture/framebuffer handling, display timing and video output.
-- SPU audio, CD-ROM controller, CD audio, and synchronization.
-- BIOS loading, region selection and legal firmware handling.
-- Game-disc parsing including track layouts, cue sheets, multi-disc playlists and supported compressed formats.
-- Digital and DualShock input, touch controls, USB/Bluetooth gamepads, analog axes and vibration.
-- Two memory-card ports, virtual memory-card files, save states and safe persistence.
-- Per-game compatibility profiles, renderer backends, scaling, frame pacing and diagnostics.
-- Android lifecycle handling, audio focus, storage permissions, thermal/performance behavior and device testing.
+- Source: https://github.com/notaz/pcsx_rearmed
+- Pinned source commit: `7838055e892061f3f5775ff9f6bb3d3d9c7fe742`
+- License: GNU General Public License version 2 (GPL-2.0)
+- License text: `THIRD_PARTY_LICENSES/PCSX-ReARMed-COPYING`
+
+The upstream source and its submodules are fetched at the pinned revision by the Android workflow. The PCSX-ReARMed core is a third-party project; TouchStation does not claim authorship of that core. Review the upstream source and license before redistributing modified builds.
+
+## BIOS and games
+
+No PlayStation BIOS or commercial game is included. The app lets you import a BIOS file and game-disc files that you are legally entitled to use. Some games need the full disc folder so the CUE sheet can find its BIN tracks and related files.
+
+PCSX-ReARMed can fall back to its built-in HLE BIOS when an external BIOS is unavailable, but the libretro documentation recommends a compatible user-provided BIOS for better compatibility. Supported content includes CUE, BIN, ISO, IMG, CHD, PBP, M3U, MDF, TOC and other core-supported formats.
 
 ## Android targets
 
-- Minimum Android version: Android 8.0 (API 26)
+- Minimum Android: Android 8.0 (API 26)
 - Target SDK: 35
-- ABIs: arm64-v8a, armeabi-v7a
-- Application ID: com.touchstation.app
+- ABIs: `arm64-v8a`, `armeabi-v7a`
+- Application ID: `com.touchstation.app`
+- Version code: `100`
+- Version name: `1.00 Alpha`
 
 ## Build
 
-The GitHub Actions workflow Build TouchStation debug APK builds a debug APK when manually started or when relevant source files are pushed to the main branch. The artifact is named TouchStation-debug-APK.
+The GitHub Actions workflow builds the pinned PCSX-ReARMed core with the Android NDK for both ABIs, packages the native libraries, and then builds the debug APK.
 
-TouchStation does not bundle commercial games or PlayStation BIOS firmware. Use only files you are legally entitled to use.
+A local build requires Android SDK 35, Android NDK `27.2.12479018`, CMake `3.22.1`, Gradle, Git, and the PCSX-ReARMed source checked out with its submodules at the pinned commit. Place the source at `third_party/pcsx_rearmed` before running `gradle assembleDebug`.
+
+The universal APK contains both ARM core libraries. Its actual size is reported by the build; TouchStation does not add filler data just to inflate the package.
