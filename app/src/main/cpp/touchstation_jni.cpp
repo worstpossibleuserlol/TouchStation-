@@ -65,11 +65,13 @@ decltype(&retro_set_controller_port_device) pSetController = nullptr;
 
 template <typename T>
 bool bindSymbol(T& target, const char* name) {
-    target = reinterpret_cast<T>(dlsym(gCoreHandle, name));
-    if (!target) {
+    void* symbol = dlsym(gCoreHandle, name);
+    if (!symbol) {
         LOGE("Missing core symbol: %s", name);
         return false;
     }
+    static_assert(sizeof(target) == sizeof(symbol), "Function pointer size differs from dlsym result");
+    std::memcpy(&target, &symbol, sizeof(target));
     return true;
 }
 
@@ -189,16 +191,6 @@ bool environment(unsigned command, void* data) {
             if (data) *static_cast<const char**>(data) = gContentDirectory.c_str();
             return data != nullptr;
 #endif
-#ifdef RETRO_ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY
-        case RETRO_ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY:
-            if (data) *static_cast<const char**>(data) = gSystemDirectory.c_str();
-            return data != nullptr;
-#endif
-#ifdef RETRO_ENVIRONMENT_GET_LIBRETRO_PATH
-        case RETRO_ENVIRONMENT_GET_LIBRETRO_PATH:
-            if (data) *static_cast<const char**>(data) = gCorePath.c_str();
-            return data != nullptr;
-#endif
         case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
             if (!data) return false;
             gPixelFormat = *static_cast<unsigned*>(data);
@@ -268,26 +260,28 @@ bool ensureCore() {
     }
 
     bool ok = true;
-#define BIND(symbol) ok = bindSymbol(p##symbol, "retro_" #symbol) && ok
-    BIND(set_environment);
-    BIND(set_video_refresh);
-    BIND(set_audio_sample);
-    BIND(set_audio_sample_batch);
-    BIND(set_input_poll);
-    BIND(set_input_state);
-    BIND(init);
-    BIND(deinit);
-    BIND(load_game);
-    BIND(unload_game);
-    BIND(run);
-    BIND(reset);
-    BIND(get_system_av_info);
-    BIND(serialize_size);
-    BIND(serialize);
-    BIND(unserialize);
-#undef BIND
-    pSetController = reinterpret_cast<decltype(pSetController)>(
-        dlsym(gCoreHandle, "retro_set_controller_port_device"));
+    ok = bindSymbol(pSetEnvironment, "retro_set_environment") && ok;
+    ok = bindSymbol(pSetVideoRefresh, "retro_set_video_refresh") && ok;
+    ok = bindSymbol(pSetAudioSample, "retro_set_audio_sample") && ok;
+    ok = bindSymbol(pSetAudioSampleBatch, "retro_set_audio_sample_batch") && ok;
+    ok = bindSymbol(pSetInputPoll, "retro_set_input_poll") && ok;
+    ok = bindSymbol(pSetInputState, "retro_set_input_state") && ok;
+    ok = bindSymbol(pInit, "retro_init") && ok;
+    ok = bindSymbol(pDeinit, "retro_deinit") && ok;
+    ok = bindSymbol(pLoadGame, "retro_load_game") && ok;
+    ok = bindSymbol(pUnloadGame, "retro_unload_game") && ok;
+    ok = bindSymbol(pRun, "retro_run") && ok;
+    ok = bindSymbol(pReset, "retro_reset") && ok;
+    ok = bindSymbol(pGetAvInfo, "retro_get_system_av_info") && ok;
+    ok = bindSymbol(pSerializeSize, "retro_serialize_size") && ok;
+    ok = bindSymbol(pSerialize, "retro_serialize") && ok;
+    ok = bindSymbol(pUnserialize, "retro_unserialize") && ok;
+
+    void* controllerSymbol = dlsym(gCoreHandle, "retro_set_controller_port_device");
+    if (controllerSymbol) {
+        static_assert(sizeof(pSetController) == sizeof(controllerSymbol), "Function pointer size differs from dlsym result");
+        std::memcpy(&pSetController, &controllerSymbol, sizeof(pSetController));
+    }
     return ok;
 }
 } // namespace
