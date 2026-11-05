@@ -1,0 +1,14 @@
+PCSX-ReARMed third-party license
+
+The PCSX-ReARMed source used by TouchStation is licensed under GNU General Public License version 2 (GPL-2.0).
+
+Upstream source:
+https://github.com/notaz/pcsx_rearmed
+
+Pinned source commit:
+7838055e892061f3f5775ff9f6bb3d3d9c7fe742
+
+The complete license text is stored in this directory as PCSX-ReARMed-COPYING.
+The Android build obtains the corresponding source and submodules from the upstream repository at the pinned revision.
+
+TouchStation's Android frontend and the third-party emulator core are separately identified in the project source and documentation.
