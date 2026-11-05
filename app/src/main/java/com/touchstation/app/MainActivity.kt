@@ -427,42 +427,60 @@ private fun LibraryScreen(
     onSelectBios: () -> Unit,
     onStart: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(11.dp)) {
-        Column {
-            Text("Your games", color = White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("Import disc images or a folder containing a CUE/BIN set.", color = SoftWhite, fontSize = 12.sp)
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("All Games", color = White, fontSize = 29.sp, fontWeight = FontWeight.Bold)
+            Text("Your PlayStation collection", color = SoftWhite, fontSize = 13.sp)
         }
         Panel {
-            Text("GAME LIBRARY", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-            Spacer(Modifier.height(8.dp))
-            Text(selectedGame?.let { File(it).name } ?: "No game imported", color = White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(8.dp))
-            PrimaryAction("START GAME", onStart, enabled = coreAvailable && selectedGame != null)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    modifier = Modifier.size(54.dp).background(AccentDark, RoundedCornerShape(13.dp)).border(1.dp, Accent.copy(alpha = 0.55f), RoundedCornerShape(13.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("TS", color = Accent, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("GAME LIBRARY", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+                    Text(if (selectedGame != null) File(selectedGame).nameWithoutExtension else "No games added yet", color = White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
+                    Text(selectedGame?.let { File(it).extension.uppercase() + " • Imported" } ?: "Add a disc image or game folder to begin", color = SoftWhite, fontSize = 11.sp)
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            PrimaryAction("PLAY SELECTED GAME", onStart, enabled = coreAvailable && selectedGame != null)
             Spacer(Modifier.height(7.dp))
-            SecondaryAction("ADD GAME FILE", onAddGame)
-            Spacer(Modifier.height(6.dp))
-            SecondaryAction("IMPORT DISC FOLDER", onImportFolder)
-            Spacer(Modifier.height(6.dp))
-            Text("Supports CUE, BIN, ISO, IMG, CHD, PBP, M3U, MDF, TOC, CCD and more.", color = SoftWhite, fontSize = 11.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Box(modifier = Modifier.weight(1f)) { SecondaryAction("ADD GAME FILE", onAddGame) }
+                Box(modifier = Modifier.weight(1f)) { SecondaryAction("IMPORT FOLDER", onImportFolder) }
+            }
+            Spacer(Modifier.height(5.dp))
+            Text("CUE · BIN · CHD · ISO · IMG · PBP · M3U and other core-supported formats", color = SoftWhite, fontSize = 10.sp)
         }
+        Text("SYSTEM STATUS", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
         Panel {
-            Text("BIOS FIRMWARE", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-            Spacer(Modifier.height(7.dp))
-            Text(selectedBios ?: "No external BIOS imported", color = White, fontSize = 13.sp)
-            Spacer(Modifier.height(7.dp))
-            SecondaryAction("SELECT BIOS FILE", onSelectBios)
-            Text("No BIOS or commercial game is bundled. The core can use HLE when a compatible BIOS is absent.", color = SoftWhite, fontSize = 11.sp)
-        }
-        Panel {
-            Text("CORE STATUS", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-            Spacer(Modifier.height(6.dp))
-            Text(if (coreAvailable) "PCSX-ReARMed loaded • ARM native core" else "Native core unavailable", color = White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("PCSX-ReARMed", color = White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(if (coreAvailable) "Native emulation core loaded" else "Core library unavailable", color = SoftWhite, fontSize = 11.sp)
+                }
+                Text(if (coreAvailable) "READY" else "OFFLINE", color = if (coreAvailable) Accent else SoftWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(9.dp))
             Text(status, color = SoftWhite, fontSize = 11.sp)
         }
         Panel {
-            Text("SAVE DATA", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            Text("Memory cards are stored in TouchStation's private save folder. Use in-game save points as usual.", color = SoftWhite, fontSize = 11.sp)
+            Text("BIOS FIRMWARE", color = White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(4.dp))
+            Text(selectedBios ?: "No external BIOS selected", color = SoftWhite, fontSize = 12.sp)
+            Spacer(Modifier.height(9.dp))
+            SecondaryAction("IMPORT BIOS FILE", onSelectBios)
+            Spacer(Modifier.height(5.dp))
+            Text("Use firmware you are legally entitled to use. No BIOS or commercial games are bundled.", color = SoftWhite, fontSize = 10.sp)
+        }
+        Panel {
+            Text("MEMORY CARDS & SAVE STATES", color = White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(4.dp))
+            Text("In-game memory card saves and emulator save states are stored separately in the app's private storage.", color = SoftWhite, fontSize = 11.sp)
         }
     }
 }
