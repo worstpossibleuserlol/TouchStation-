@@ -62,11 +62,14 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 
-private val ScreenGrey = Color(0xFF333333)
-private val PanelGrey = Color(0xFF424242)
-private val DarkGrey = Color(0xFF242424)
-private val White = Color(0xFFFFFFFF)
-private val SoftWhite = Color(0xFFE5E5E5)
+private val ScreenGrey = Color(0xFF111923)
+private val PanelGrey = Color(0xFF1D2936)
+private val DarkGrey = Color(0xFF263646)
+private val White = Color(0xFFF2F5F7)
+private val SoftWhite = Color(0xFFB5C2CC)
+private val Accent = Color(0xFF63C6B2)
+private val AccentDark = Color(0xFF173D3A)
+private val BorderGrey = Color(0xFF354656)
 
 private data class CoreChoice(val value: String, val label: String = value)
 
@@ -216,24 +219,26 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     } else {
-                        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp)) {
+                        Column(modifier = Modifier.fillMaxSize().background(ScreenGrey).padding(horizontal = 18.dp, vertical = 16.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text("TOUCHSTATION", color = White, fontSize = 19.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
-                                    Text("PLAYSTATION 1 EMULATOR", color = SoftWhite, fontSize = 9.sp, letterSpacing = 1.4.sp)
+                                    Text("TOUCHSTATION", color = White, fontSize = 21.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
+                                    Text("PLAYSTATION • GAME LIBRARY", color = SoftWhite, fontSize = 9.sp, letterSpacing = 1.5.sp)
                                 }
-                                Text("1.00", color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Surface(color = AccentDark, shape = RoundedCornerShape(50)) {
+                                    Text("1.0.1 ALPHA", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                                }
+                            }
+                            Spacer(Modifier.height(20.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
+                                TopTab("GAMES", selectedTab == "Library", Modifier.weight(1f)) { selectedTab = "Library" }
+                                TopTab("SETTINGS", selectedTab == "Settings", Modifier.weight(1f)) { selectedTab = "Settings" }
                             }
                             Spacer(Modifier.height(16.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                                TopTab("Library", selectedTab == "Library", Modifier.weight(1f)) { selectedTab = "Library" }
-                                TopTab("Settings", selectedTab == "Settings", Modifier.weight(1f)) { selectedTab = "Settings" }
-                            }
-                            Spacer(Modifier.height(12.dp))
                             if (selectedTab == "Library") {
                                 LibraryScreen(
                                     selectedGame = selectedGame,
@@ -273,8 +278,8 @@ class MainActivity : ComponentActivity() {
                             }
                             Spacer(Modifier.height(10.dp))
                             Text(
-                                if (coreAvailable) "TOUCHSTATION 1.00 ALPHA  •  PCSX-REARMED" else "TOUCHSTATION 1.00 ALPHA  •  CORE UNAVAILABLE",
-                                color = SoftWhite, fontSize = 9.sp, letterSpacing = 0.7.sp
+                                if (coreAvailable) "PCSX-REARMED CORE READY" else "NATIVE CORE UNAVAILABLE",
+                                color = if (coreAvailable) Accent else SoftWhite, fontSize = 9.sp, letterSpacing = 0.8.sp
                             )
                         }
                     }
