@@ -43,6 +43,7 @@ std::array<int16_t, kAudioCapacityFrames * 2> gAudio{};
 std::atomic<size_t> gAudioRead{0};
 std::atomic<size_t> gAudioWrite{0};
 std::atomic<uint16_t> gJoypadMask{0};
+std::array<std::array<std::atomic<int16_t>, 2>, 2> gAnalog{};
 
 decltype(&retro_set_environment) pSetEnvironment = nullptr;
 decltype(&retro_set_video_refresh) pSetVideoRefresh = nullptr;
@@ -148,7 +149,11 @@ void videoRefresh(const void* data, unsigned width, unsigned height, size_t pitc
 void inputPoll() {}
 
 int16_t inputState(unsigned port, unsigned device, unsigned index, unsigned id) {
-    if (port != 0 || device != RETRO_DEVICE_JOYPAD || index != 0) return 0;
+    if (port != 0) return 0;
+    if (device == RETRO_DEVICE_ANALOG && index < 2 && id < 2) {
+        return gAnalog[index][id].load(std::memory_order_acquire);
+    }
+    if (device != RETRO_DEVICE_JOYPAD || index != 0) return 0;
     const uint16_t mask = gJoypadMask.load(std::memory_order_acquire);
     if (id == RETRO_DEVICE_ID_JOYPAD_MASK) return static_cast<int16_t>(mask);
     if (id >= 16) return 0;
@@ -371,6 +376,13 @@ Java_com_touchstation_app_CoreBridge_nativeSetButton(JNIEnv*, jobject, jint id, 
     const uint16_t bit = static_cast<uint16_t>(1u << id);
     if (pressed) gJoypadMask.fetch_or(bit, std::memory_order_acq_rel);
     else gJoypadMask.fetch_and(static_cast<uint16_t>(~bit), std::memory_order_acq_rel);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_touchstation_app_CoreBridge_nativeSetAnalog(JNIEnv*, jobject, jint stick, jint axis, jint value) {
+    if (stick < 0 || stick >= 2 || axis < 0 || axis >= 2) return;
+    const int clamped = std::max(-32767, std::min(32767, value));
+    gAnalog[stick][axis].store(static_cast<int16_t>(clamped), std::memory_order_release);
 }
 
 extern "C" JNIEXPORT jint JNICALL
