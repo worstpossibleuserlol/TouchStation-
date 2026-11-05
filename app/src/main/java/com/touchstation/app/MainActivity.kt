@@ -559,6 +559,7 @@ private fun EmulatorScreen(gamePath: String, saveDirectory: File, onExit: () -> 
     val running = remember { AtomicBoolean(true) }
     val paused = remember { AtomicBoolean(false) }
     var pausedUi by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
     val gameFile = File(gamePath)
     val stateDirectory = remember { File(saveDirectory, "states").apply { mkdirs() } }
     val gameStateKey = remember(gamePath) {
@@ -622,52 +623,74 @@ private fun EmulatorScreen(gamePath: String, saveDirectory: File, onExit: () -> 
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = Modifier.fillMaxSize().background(ScreenGrey).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(gameFile.name, color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text("PCSX-ReARMed • 4:3 display", color = SoftWhite, fontSize = 10.sp)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(gameFile.nameWithoutExtension, color = White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text("PCSX-ReARMed  •  PS1", color = SoftWhite, fontSize = 10.sp)
             }
-            SecondaryAction("EXIT") { onExit() }
-        }
-        AndroidView(
-            factory = { viewContext ->
-                SurfaceView(viewContext).apply {
-                    holder.addCallback(object : SurfaceHolder.Callback {
-                        override fun surfaceCreated(holder: SurfaceHolder) { CoreBridge.setSurface(holder.surface) }
-                        override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) { CoreBridge.setSurface(holder.surface) }
-                        override fun surfaceDestroyed(holder: SurfaceHolder) { CoreBridge.setSurface(null) }
-                    })
-                    isFocusable = true
-                    isFocusableInTouchMode = true
-                    requestFocus()
-                }
-            },
-            modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black).border(1.dp, White, RoundedCornerShape(4.dp))
-        )
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("SAVE SLOT $stateSlot / 10", color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            SecondaryAction("NEXT SLOT") {
-                stateSlot = if (stateSlot >= 10) 1 else stateSlot + 1
-            }
-        }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             SecondaryAction(if (pausedUi) "RESUME" else "PAUSE") {
                 pausedUi = !pausedUi
                 paused.set(pausedUi)
             }
-            SecondaryAction("RESET") { CoreBridge.reset() }
-            SecondaryAction("SAVE STATE") {
-                val ok = CoreBridge.saveState(stateFile.absolutePath)
-                Toast.makeText(context, if (ok) "Saved slot $stateSlot" else "Save state failed", Toast.LENGTH_SHORT).show()
+            Spacer(Modifier.size(5.dp))
+            SecondaryAction("MENU") { menuOpen = !menuOpen }
+        }
+        if (menuOpen) {
+            Panel {
+                Text("QUICK MENU", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                Spacer(Modifier.height(7.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    Box(Modifier.weight(1f)) {
+                        SecondaryAction("RESET") { CoreBridge.reset(); menuOpen = false }
+                    }
+                    Box(Modifier.weight(1f)) {
+                        SecondaryAction("SAVE STATE") {
+                            val ok = CoreBridge.saveState(stateFile.absolutePath)
+                            Toast.makeText(context, if (ok) "Saved slot $stateSlot" else "Save state failed", Toast.LENGTH_SHORT).show()
+                            menuOpen = false
+                        }
+                    }
+                    Box(Modifier.weight(1f)) {
+                        SecondaryAction("LOAD STATE") {
+                            val ok = stateFile.exists() && CoreBridge.loadState(stateFile.absolutePath)
+                            Toast.makeText(context, if (ok) "Loaded slot $stateSlot" else "Slot $stateSlot is empty or invalid", Toast.LENGTH_SHORT).show()
+                            menuOpen = false
+                        }
+                    }
+                }
+                Spacer(Modifier.height(7.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("SAVE SLOT  $stateSlot / 10", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    SecondaryAction("NEXT SLOT") { stateSlot = if (stateSlot >= 10) 1 else stateSlot + 1 }
+                    SecondaryAction("EXIT GAME") { onExit() }
+                }
             }
-            SecondaryAction("LOAD STATE") {
-                val ok = stateFile.exists() && CoreBridge.loadState(stateFile.absolutePath)
-                Toast.makeText(context, if (ok) "Loaded slot $stateSlot" else "Slot $stateSlot is empty or invalid", Toast.LENGTH_SHORT).show()
+        }
+        Box(modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black, RoundedCornerShape(8.dp)).border(1.dp, BorderGrey, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+            AndroidView(
+                factory = { viewContext ->
+                    SurfaceView(viewContext).apply {
+                        holder.addCallback(object : SurfaceHolder.Callback {
+                            override fun surfaceCreated(holder: SurfaceHolder) { CoreBridge.setSurface(holder.surface) }
+                            override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) { CoreBridge.setSurface(holder.surface) }
+                            override fun surfaceDestroyed(holder: SurfaceHolder) { CoreBridge.setSurface(null) }
+                        })
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        requestFocus()
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+            if (pausedUi) {
+                Surface(color = ScreenGrey.copy(alpha = 0.88f), shape = RoundedCornerShape(12.dp)) {
+                    Text("PAUSED", color = Accent, fontSize = 15.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp, modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp))
+                }
             }
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 PadButton("▲", 4)
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     PadButton("◀", 6)
@@ -675,7 +698,7 @@ private fun EmulatorScreen(gamePath: String, saveDirectory: File, onExit: () -> 
                     PadButton("▶", 7)
                 }
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     PadButton("△", 1)
                     PadButton("○", 0)
