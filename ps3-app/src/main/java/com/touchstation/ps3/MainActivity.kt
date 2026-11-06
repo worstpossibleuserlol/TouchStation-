@@ -570,14 +570,14 @@ private fun InfoPanel(title: String, message: String) {
 
 private fun readControllers(context: Context): List<ControllerEntry> {
     val manager = context.getSystemService(Context.INPUT_SERVICE) as InputManager
-    return manager.inputDeviceIds.mapNotNull { id ->
+    return manager.inputDeviceIds.asSequence().mapNotNull { id ->
         val device = InputDevice.getDevice(id) ?: return@mapNotNull null
         val gamepad = device.supportsSource(InputDevice.SOURCE_GAMEPAD) ||
             device.supportsSource(InputDevice.SOURCE_JOYSTICK) ||
             device.supportsSource(InputDevice.SOURCE_DPAD)
         if (!gamepad || device.isVirtual) return@mapNotNull null
         ControllerEntry(device.id, device.name, "Vendor ${device.vendorId} · Product ${device.productId} · Sources 0x${device.sources.toString(16)}")
-    }
+    }.toList()
 }
 
 private fun loadGames(preferences: SharedPreferences): List<GameEntry> {
