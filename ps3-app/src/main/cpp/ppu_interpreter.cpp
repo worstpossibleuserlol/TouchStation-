@@ -109,6 +109,8 @@ bool PpuInterpreter::loadWords(const std::vector<std::uint32_t>& words, std::uin
     state_.cr = 0u;
     state_.instructions_executed = 0u;
     state_.halted = false;
+    state_.host_call_pending = false;
+    state_.host_call_number = 0u;
     state_.fault.clear();
     return true;
 }
@@ -258,6 +260,13 @@ bool PpuInterpreter::execute(std::uint32_t instruction) {
             if (!effectiveAddress(ra, simm, address)) return fail("invalid stw register");
             if ((address & 3u) != 0u) return fail("unaligned stw guest write");
             return write32(address, static_cast<std::uint32_t>(state_.gpr[rt]));
+        case 17u: { // sc: TouchStation's documented homebrew host-call ABI; not the PS3 LV2 ABI.
+            if ((instruction & 0x03fffffeu) != 0x00000002u)
+                return fail("unsupported PPU system-call encoding");
+            state_.host_call_number = state_.gpr[0];
+            state_.host_call_pending = true;
+            return true;
+        }
         case 18u: { // b (relative/absolute, optional link)
             std::int64_t displacement = static_cast<std::int64_t>(instruction & 0x03fffffcu);
             if ((displacement & (1ll << 25u)) != 0) displacement |= ~0x03ffffffll;
@@ -305,6 +314,13 @@ std::uint64_t PpuInterpreter::run(std::uint64_t instruction_budget) {
 std::uint32_t PpuInterpreter::encodeAddi(unsigned rt, unsigned ra, std::int16_t imm) {
     return (14u << 26u) | ((rt & 31u) << 21u) | ((ra & 31u) << 16u) |
            static_cast<std::uint16_t>(imm);
+}
+std::uint32_t PpuInterpreter::encodeAddis(unsigned rt, unsigned ra, std::int16_t imm) {
+    return (15u << 26u) | ((rt & 31u) << 21u) | ((ra & 31u) << 16u) |
+           static_cast<std::uint16_t>(imm);
+}
+std::uint32_t PpuInterpreter::encodeSc() {
+    return 0x44000002u;
 }
 std::uint32_t PpuInterpreter::encodeAdd(unsigned rt, unsigned ra, unsigned rb) {
     return (31u << 26u) | ((rt & 31u) << 21u) | ((ra & 31u) << 16u) |
@@ -372,7 +388,19 @@ SelfTestResult runPpuSelfTest() {
         return result;
     }
 
-    result.message = "PASS: PPU subset, big-endian memory, relative branch and memory bounds checks passed.";
+    PpuInterpreter syscall_cpu;
+    if (!syscall_cpu.loadWords({
+            PpuInterpreter::encodeAddi(0u, 0u, 7),
+            PpuInterpreter::encodeSc()
+        }) || syscall_cpu.run(2u) != 2u ||
+        !syscall_cpu.state().host_call_pending ||
+        syscall_cpu.state().host_call_number != 7u) {
+        result.passed = false;
+        result.message = "FAIL: PPU homebrew host-call instruction test failed. " + syscall_cpu.state().fault;
+        return result;
+    }
+
+    result.message = "PASS: PPU subset, big-endian memory, relative branch, bounds checks and homebrew host-call trap passed.";
     return result;
 }
 

@@ -23,6 +23,7 @@ public:
         std::uint32_t pc = 0;
         std::uint64_t instructions_executed = 0;
         std::uint32_t stop_code = 0;
+        std::vector<std::int16_t> audio_pcm;
         bool stopped = false;
         std::string fault;
     };
@@ -39,6 +40,7 @@ public:
     std::uint64_t run(std::uint64_t instruction_budget);
 
     static std::uint32_t encodeStop(std::uint16_t code);
+    static std::uint32_t encodeWrch(unsigned channel, unsigned rt);
     static std::uint32_t encodeIl(unsigned rt, std::int16_t immediate);
     static std::uint32_t encodeAi(unsigned rt, unsigned ra, std::int16_t immediate);
     static std::uint32_t encodeA(unsigned rt, unsigned ra, unsigned rb);

@@ -52,12 +52,12 @@ The universal APK contains the four ARM and x86 core libraries. Its actual size 
 
 ## Experimental PS3 edition
 
-TouchStation PS3 1.0.0 Alpha is developed separately in the ps3-alpha branch under the :ps3-app module.
+TouchStation PS3 1.0.1 Alpha is developed separately in the ps3-1.0.1-alpha branch under the :ps3-app module.
 
-It adds a limited PPU interpreter and guarded PPC64 ELF loader, a subset SPU interpreter, an RSX FIFO/method processor with a CPU clear/scissor reference path, Bluetooth pairing, physical controller detection, no-touch-control display, and extensive display/crop/per-game settings.
+It adds PS3 PUP container import/validation, a native PPU guest-call to RSX RGBA-frame demo, a PPU-triggered SPU WRCH-to-PCM audio demo, fullscreen output without touch controls, PUP parser tests, and the uploaded square logo as the Android launcher icon.
 
-**This is still not a complete or broadly playable PS3 emulator.** The Alpha does not implement the full Cell CPU, SPU MFC/DMA, RSX 3D rendering, audio, LV1/LV2 firmware services, encrypted retail SELF support or ISO boot. The ELF boot attempt only accepts a narrow unencrypted big-endian PPC64 ELF subset.
+**This is a development vertical slice, not a complete or retail-game-compatible PS3 emulator.** The RSX path is still a CPU clear/scissor reference, SPU is a limited instruction subset without MFC/DMA, PPU is a limited PPC64 interpreter, and the guest-call ABI is a TouchStation demo ABI rather than PS3 LV2. PUP import stores and validates the user-supplied container; it does not decrypt or install firmware. Retail SELF/ISO boot and commercial-game compatibility are not implemented.
 
-Read [README-PS3-ALPHA.md](README-PS3-ALPHA.md) for the exact implementation status and build instructions. The existing PS1 application module remains separate.
+Read [README-PS3-1.0.1-ALPHA.md](README-PS3-1.0.1-ALPHA.md) for implementation details and limits. The PS1 application remains separate.
 
 No Sony firmware, BIOS, encryption keys or commercial games are bundled. Use only files you are legally entitled to use.

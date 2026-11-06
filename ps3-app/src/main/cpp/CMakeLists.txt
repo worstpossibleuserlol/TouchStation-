@@ -5,6 +5,7 @@ if(ANDROID)
         ppu_interpreter.cpp
         spu_interpreter.cpp
         rsx_command_processor.cpp
+        guest_pipeline.cpp
         jni_bridge.cpp
     )
     find_library(log-lib log)
@@ -16,6 +17,7 @@ else()
             ppu_interpreter.cpp
             spu_interpreter.cpp
             rsx_command_processor.cpp
+            guest_pipeline.cpp
             ppu_self_test.cpp
         )
         add_test(NAME engine_self_test COMMAND engine_self_test)

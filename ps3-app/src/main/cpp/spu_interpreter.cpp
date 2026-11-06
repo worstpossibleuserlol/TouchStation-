@@ -125,6 +125,18 @@ bool SpuInterpreter::execute(std::uint32_t instruction) {
         case 0x003u: // DSYNC
         case 0x201u: // NOP
             return true;
+        case 0x10du: { // WRCH: expose the guest audio mailbox channel to the PCM sink.
+            constexpr unsigned kAudioSampleChannel = 0x28u;
+            constexpr std::size_t kMaxAudioSamples = 192000u;
+            if (ra != kAudioSampleChannel) return fail("unsupported SPU channel write");
+            if (state_.audio_pcm.size() > kMaxAudioSamples - 4u)
+                return fail("SPU audio mailbox exceeded its bounded PCM queue");
+            for (std::size_t lane = 0; lane < 4u; ++lane) {
+                state_.audio_pcm.push_back(static_cast<std::int16_t>(
+                    state_.gpr[rt].word[lane] & 0xffffu));
+            }
+            return true;
+        }
         case 0x040u: // SF: rb - ra
             for (std::size_t i = 0; i < 4u; ++i)
                 state_.gpr[rt].word[i] = state_.gpr[rb].word[i] - state_.gpr[ra].word[i];
@@ -287,6 +299,9 @@ std::uint64_t SpuInterpreter::run(std::uint64_t instruction_budget) {
 std::uint32_t SpuInterpreter::encodeStop(std::uint16_t code) {
     return static_cast<std::uint32_t>(code) & 0x3fffu;
 }
+std::uint32_t SpuInterpreter::encodeWrch(unsigned channel, unsigned rt) {
+    return (0x10du << 21u) | (rt & 0x7fu) | ((channel & 0x7fu) << 7u);
+}
 std::uint32_t SpuInterpreter::encodeIl(unsigned rt, std::int16_t immediate) {
     return (0x081u << 23u) | (rt & 0x7fu) |
            (static_cast<std::uint32_t>(static_cast<std::uint16_t>(immediate)) << 7u);
@@ -359,7 +374,24 @@ SpuSelfTestResult runSpuSelfTest() {
         return result;
     }
 
-    result.message += " Relative branch, source-register and local-store boundary tests passed.";
+    SpuInterpreter audio_spu;
+    const std::vector<std::uint32_t> audio_program = {
+        SpuInterpreter::encodeIl(7u, 8192),
+        SpuInterpreter::encodeWrch(0x28u, 7u),
+        SpuInterpreter::encodeIl(7u, -8192),
+        SpuInterpreter::encodeWrch(0x28u, 7u),
+        SpuInterpreter::encodeStop(0u)
+    };
+    if (!audio_spu.loadWords(audio_program) || audio_spu.run(16u) != audio_program.size() ||
+        audio_spu.state().audio_pcm.size() != 8u ||
+        audio_spu.state().audio_pcm[0] != 8192 ||
+        audio_spu.state().audio_pcm[4] != -8192) {
+        result.passed = false;
+        result.message = "FAIL: SPU WRCH audio mailbox sample forwarding failed. " + audio_spu.state().fault;
+        return result;
+    }
+
+    result.message += " Relative branch, source-register, local-store boundary and audio-mailbox tests passed.";
     return result;
 }
 

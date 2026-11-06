@@ -1,6 +1,6 @@
 package com.touchstation.ps3
 
-/** JNI access to the experimental PPU, SPU and RSX reference subsystems. */
+/** JNI access to the experimental PPU, SPU, RSX and homebrew output pipeline. */
 object PpuRuntime {
     @Volatile private var loaded = false
 
@@ -36,6 +36,21 @@ object PpuRuntime {
         }
     }
 
+    @Synchronized
+    fun runPipelineFrame(width: Int, height: Int): ByteArray {
+        ensureLoaded()
+        require(width in 1..2048 && height in 1..2048) { "Frame dimensions are outside the safe range." }
+        return nativeRunPipelineFrame(width, height)
+    }
+
+    @Synchronized
+    fun runPipelineAudio(): ShortArray {
+        ensureLoaded()
+        return nativeRunPipelineAudio()
+    }
+
     private external fun nativeSelfTest(): String
     private external fun nativeBootPpc64Elf(image: ByteArray): String
+    private external fun nativeRunPipelineFrame(width: Int, height: Int): ByteArray
+    private external fun nativeRunPipelineAudio(): ShortArray
 }

@@ -1,6 +1,8 @@
 package com.touchstation.ps3
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.content.Intent
 import android.content.SharedPreferences
 import android.hardware.input.InputManager
@@ -126,7 +128,36 @@ private fun TouchStationApp(preferences: SharedPreferences, lastControllerInput:
     var games by remember { mutableStateOf(loadGames(preferences)) }
     var selectedGame by remember { mutableStateOf<GameEntry?>(null) }
     var controllerList by remember { mutableStateOf(readControllers(context)) }
-    var ppuResult by remember { mutableStateOf("Native PPU self-test has not run yet.") }
+    var ppuResult by remember { mutableStateOf("Native PPU · SPU · RSX diagnostics have not run yet.") }
+    var firmwareStatus by remember {
+        mutableStateOf(preferences.getString("ps3_firmware_status", "No PS3 system software imported.") ?: "No PS3 system software imported.")
+    }
+
+    val importFirmware = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            firmwareStatus = "Copying and validating PS3UPDAT.PUP…"
+            val mainHandler = Handler(Looper.getMainLooper())
+            Thread({
+                val outcome = runCatching { PupFirmwareManager.importAndValidate(context, uri) }
+                mainHandler.post {
+                    outcome.fold(
+                        onSuccess = { info ->
+                            val status = "PS3 PUP container validated · image ${info.displayVersion()} · ${info.segmentCount} segments · ${info.totalBytes / (1024 * 1024)} MiB · SHA-256 ${info.sha256.take(16)}…"
+                            preferences.edit()
+                                .putString("ps3_firmware_path", info.storedFile.absolutePath)
+                                .putString("ps3_firmware_sha256", info.sha256)
+                                .putString("ps3_firmware_status", status)
+                                .apply()
+                            firmwareStatus = status
+                        },
+                        onFailure = { error ->
+                            firmwareStatus = "Import rejected: ${error.message ?: error.javaClass.simpleName}"
+                        }
+                    )
+                }
+            }, "TouchStation-PUP-import").start()
+        }
+    }
 
     val importGame = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) {
@@ -174,7 +205,15 @@ private fun TouchStationApp(preferences: SharedPreferences, lastControllerInput:
                 Tab.SYSTEM -> SystemPage(
                     ppuResult = ppuResult,
                     onRunSelfTest = { ppuResult = PpuRuntime.selfTest() },
-                    controllerCount = controllerList.size
+                    controllerCount = controllerList.size,
+                    firmwareStatus = firmwareStatus,
+                    onImportFirmware = { importFirmware.launch(arrayOf("*/*")) },
+                    onRunPipelineDemo = {
+                        context.startActivity(
+                            Intent(context, GameDisplayActivity::class.java)
+                                .putExtra("run_pipeline_demo", true)
+                        )
+                    }
                 )
             }
             NavigationBar(containerColor = Panel) {
@@ -227,7 +266,7 @@ private fun TopBrandHeader() {
         Spacer(Modifier.height(3.dp))
         Box(Modifier.fillMaxWidth().height(3.dp).background(Blue, RoundedCornerShape(4.dp)))
         Text("PS3", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Medium, letterSpacing = 8.sp)
-        Text("1.0.0 ALPHA", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp)
+        Text("1.0.1 ALPHA", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp)
     }
 }
 
@@ -409,21 +448,40 @@ private fun ColumnScope.SettingsPage(preferences: SharedPreferences) {
 }
 
 @Composable
-private fun ColumnScope.SystemPage(ppuResult: String, onRunSelfTest: () -> Unit, controllerCount: Int) {
+private fun ColumnScope.SystemPage(
+    ppuResult: String,
+    onRunSelfTest: () -> Unit,
+    controllerCount: Int,
+    firmwareStatus: String,
+    onImportFirmware: () -> Unit,
+    onRunPipelineDemo: () -> Unit
+) {
     Column(Modifier.weight(1f).fillMaxWidth().padding(16.dp)) {
-        PageHeading("System & diagnostics", "PPU · SPU · RSX self-tests and boot status")
-        InfoPanel("Runtime status", "PPU: partial PPC64 interpreter + guarded ELF64 loader\nSPU: instruction subset + 256 KiB local store\nRSX: FIFO/method parser + CPU clear/scissor reference\nNot implemented: full ISA, MFC/DMA, shaders, 3D rasterizer, audio, LV1/LV2, retail SELF and ISO boot")
+        PageHeading("System & diagnostics", "PPU · SPU · RSX · firmware · audio")
+        InfoPanel("Runtime status", "PPU: PPC64 interpreter subset + guarded ELF64 loader\nSPU: vector interpreter subset + WRCH PCM channel\nRSX: FIFO/method parser + RGBA clear/scissor frame path\nPipeline: custom homebrew bridge demo; not the PS3 LV2 ABI\nNot implemented: full PS3 ISA, MFC/DMA, shaders, 3D renderer, LV1/LV2 and retail game boot")
         Spacer(Modifier.height(12.dp))
-        InfoPanel("Connected controllers", "$controllerCount gamepad input device(s) currently detected by Android.")
+        SettingsGroup("PS3 system software", "Import your own official PS3 update package (.PUP). This validates the container and stores the original file; it does not decrypt or install firmware.") {
+            Text(firmwareStatus, color = if (firmwareStatus.startsWith("PS3 PUP container validated")) Good else Muted, fontSize = 11.sp)
+            Button(onClick = onImportFirmware, modifier = Modifier.fillMaxWidth()) {
+                Text("Import PS3 system software (.PUP)")
+            }
+        }
         Spacer(Modifier.height(12.dp))
-        Button(onClick = onRunSelfTest, modifier = Modifier.fillMaxWidth()) { Text("Run PPU · SPU · RSX diagnostics") }
+        InfoPanel("Connected controllers", "$controllerCount physical gamepad input device(s) currently detected by Android.")
+        Spacer(Modifier.height(12.dp))
+        Button(onClick = onRunPipelineDemo, modifier = Modifier.fillMaxWidth()) {
+            Text("Run PPU → SPU → RSX video + audio demo")
+        }
+        OutlinedButton(onClick = onRunSelfTest, modifier = Modifier.fillMaxWidth()) {
+            Text("Run native engine diagnostics")
+        }
         Spacer(Modifier.height(8.dp))
         Card(colors = CardDefaults.cardColors(containerColor = Panel2), modifier = Modifier.fillMaxWidth()) {
             Text(ppuResult, color = if (ppuResult.contains("FAIL")) Color(0xFFFFC36E) else if (ppuResult.contains("PASS")) Good else Muted,
                 fontSize = 12.sp, modifier = Modifier.padding(14.dp))
         }
         Spacer(Modifier.height(12.dp))
-        InfoPanel("Build identity", "TouchStation PS3 · 1.0.0 Alpha\nAndroid · C++17 CPU-side emulator prototypes\nNo Sony firmware, keys or commercial games are bundled.")
+        InfoPanel("Build identity", "TouchStation PS3 · 1.0.1 Alpha\nAndroid · C++17 native guest-output prototype\nNo Sony firmware, keys or commercial games are bundled.")
     }
 }
 

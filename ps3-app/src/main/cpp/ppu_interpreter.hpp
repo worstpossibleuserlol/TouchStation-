@@ -26,6 +26,8 @@ public:
         std::uint32_t cr = 0;
         std::uint64_t instructions_executed = 0;
         bool halted = false;
+        bool host_call_pending = false;
+        std::uint64_t host_call_number = 0;
         std::string fault;
     };
 
@@ -47,6 +49,8 @@ public:
     std::uint64_t run(std::uint64_t instruction_budget);
 
     static std::uint32_t encodeAddi(unsigned rt, unsigned ra, std::int16_t imm);
+    static std::uint32_t encodeAddis(unsigned rt, unsigned ra, std::int16_t imm);
+    static std::uint32_t encodeSc();
     static std::uint32_t encodeAdd(unsigned rt, unsigned ra, unsigned rb);
     static std::uint32_t encodeStw(unsigned rs, unsigned ra, std::int16_t disp);
     static std::uint32_t encodeLwz(unsigned rt, unsigned ra, std::int16_t disp);

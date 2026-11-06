@@ -1,4 +1,5 @@
 #include "ppu_interpreter.hpp"
+#include "guest_pipeline.hpp"
 #include "rsx_command_processor.hpp"
 #include "spu_interpreter.hpp"
 
@@ -57,9 +58,11 @@ int main() {
     const auto spu = touchstation::ps3::runSpuSelfTest();
     const auto rsx = touchstation::ps3::runRsxSelfTest();
     const bool elf = testPpc64ElfLoader();
+    const auto pipeline = touchstation::ps3::GuestPipeline().runDemo(320u, 180u);
     std::cout << "PPU: " << ppu.message << "\n";
     std::cout << "ELF64 loader: " << (elf ? "PASS: big-endian PPC64 PT_LOAD segment mapped and executed." : "FAIL: ELF loader test failed.") << "\n";
     std::cout << "SPU: " << spu.message << "\n";
     std::cout << "RSX: " << rsx.message << "\n";
-    return (ppu.passed && elf && spu.passed && rsx.passed) ? 0 : 1;
+    std::cout << "Guest pipeline: " << pipeline.message << "\n";
+    return (ppu.passed && elf && spu.passed && rsx.passed && pipeline.passed) ? 0 : 1;
 }
