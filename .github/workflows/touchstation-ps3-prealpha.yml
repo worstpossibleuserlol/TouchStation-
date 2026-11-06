@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: touchstation-ps3-prealpha-\${{ github.ref }}
+  group: touchstation-ps3-prealpha-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
