@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">TouchStation PS3</title>
+  <desc id="desc">Square black logo with Touch in white, Station in electric blue, a blue divider, and PS3 below.</desc>
+  <rect width="1024" height="1024" fill="#000000"/>
+  <g text-anchor="middle" font-family="Arial, Helvetica, sans-serif">
+    <text x="512" y="470" font-size="104" font-weight="700" letter-spacing="-5">
+      <tspan fill="#FFFFFF">Touch</tspan><tspan fill="#2377F5">Station</tspan>
+    </text>
+    <rect x="46" y="515" width="932" height="11" rx="5.5" fill="#2377F5"/>
+    <text x="512" y="720" font-size="224" font-weight="300" letter-spacing="24" fill="#FFFFFF">PS3</text>
+  </g>
+</svg>
