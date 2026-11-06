@@ -2,8 +2,33 @@
 
 #include <algorithm>
 #include <limits>
+#include <cstring>
 
 namespace touchstation::ps3 {
+
+namespace {
+bool readBe16(const std::vector<std::uint8_t>& bytes, std::size_t offset, std::uint16_t& value) {
+    if (offset > bytes.size() || bytes.size() - offset < 2u) return false;
+    value = static_cast<std::uint16_t>((static_cast<std::uint16_t>(bytes[offset]) << 8u) |
+                                      static_cast<std::uint16_t>(bytes[offset + 1u]));
+    return true;
+}
+bool readBe32(const std::vector<std::uint8_t>& bytes, std::size_t offset, std::uint32_t& value) {
+    if (offset > bytes.size() || bytes.size() - offset < 4u) return false;
+    value = (static_cast<std::uint32_t>(bytes[offset]) << 24u) |
+            (static_cast<std::uint32_t>(bytes[offset + 1u]) << 16u) |
+            (static_cast<std::uint32_t>(bytes[offset + 2u]) << 8u) |
+            static_cast<std::uint32_t>(bytes[offset + 3u]);
+    return true;
+}
+bool readBe64(const std::vector<std::uint8_t>& bytes, std::size_t offset, std::uint64_t& value) {
+    if (offset > bytes.size() || bytes.size() - offset < 8u) return false;
+    value = 0;
+    for (std::size_t i = 0; i < 8u; ++i) value = (value << 8u) | bytes[offset + i];
+    return true;
+}
+}
+
 
 PpuInterpreter::PpuInterpreter(std::size_t memory_size)
     : memory_(std::max<std::size_t>(memory_size, 4u), 0u) {}
@@ -85,6 +110,88 @@ bool PpuInterpreter::loadWords(const std::vector<std::uint32_t>& words, std::uin
     state_.instructions_executed = 0u;
     state_.halted = false;
     state_.fault.clear();
+    return true;
+}
+
+
+bool PpuInterpreter::loadPpc64Elf(const std::vector<std::uint8_t>& file) {
+    constexpr std::uint64_t kMaxGuestAddress = 128ull * 1024ull * 1024ull;
+    constexpr std::uint32_t kPtLoad = 1u;
+    if (file.size() < 64u) return fail("ELF file is shorter than an ELF64 header");
+    if (file[0] != 0x7fu || file[1] != 'E' || file[2] != 'L' || file[3] != 'F')
+        return fail("file is not an ELF image (encrypted SELF and disc images are not supported)");
+    if (file[4] != 2u || file[5] != 2u)
+        return fail("only big-endian ELF64 executables are supported by the PPU boot prototype");
+
+    std::uint16_t file_type = 0, machine = 0, header_size = 0, program_header_size = 0, program_header_count = 0;
+    std::uint64_t entry = 0, program_header_offset = 0;
+    if (!readBe16(file, 16u, file_type) || !readBe16(file, 18u, machine) || !readBe64(file, 24u, entry) ||
+        !readBe64(file, 32u, program_header_offset) || !readBe16(file, 52u, header_size) ||
+        !readBe16(file, 54u, program_header_size) || !readBe16(file, 56u, program_header_count))
+        return fail("ELF header is truncated");
+    if (file_type != 2u) return fail("only fixed-address ELF64 executables are supported (ET_EXEC)");
+    if (machine != 21u) return fail("ELF machine type is not PowerPC64");
+    if (header_size < 64u || program_header_size < 56u || program_header_count == 0u ||
+        program_header_count > 1024u)
+        return fail("ELF program-header layout is invalid or unsupported");
+    const std::uint64_t table_bytes = static_cast<std::uint64_t>(program_header_size) * program_header_count;
+    if (program_header_offset > file.size() || table_bytes > file.size() - program_header_offset)
+        return fail("ELF program-header table extends beyond the imported file");
+
+    struct Segment {
+        std::uint64_t file_offset;
+        std::uint64_t virtual_address;
+        std::uint64_t file_size;
+        std::uint64_t memory_size;
+        std::uint32_t flags;
+    };
+    std::vector<Segment> segments;
+    std::uint64_t required_memory = 4u;
+    bool entry_is_executable = false;
+
+    for (std::uint16_t i = 0; i < program_header_count; ++i) {
+        const std::uint64_t offset64 = program_header_offset +
+            static_cast<std::uint64_t>(i) * program_header_size;
+        if (offset64 > std::numeric_limits<std::size_t>::max())
+            return fail("ELF program-header offset exceeds host address range");
+        const auto offset = static_cast<std::size_t>(offset64);
+        std::uint32_t type = 0, flags = 0;
+        std::uint64_t file_offset = 0, virtual_address = 0, file_size = 0, memory_size = 0;
+        if (!readBe32(file, offset, type) || !readBe32(file, offset + 4u, flags) ||
+            !readBe64(file, offset + 8u, file_offset) ||
+            !readBe64(file, offset + 16u, virtual_address) ||
+            !readBe64(file, offset + 32u, file_size) ||
+            !readBe64(file, offset + 40u, memory_size))
+            return fail("ELF load segment header is truncated");
+        if (type != kPtLoad) continue;
+        if (file_size > memory_size) return fail("ELF load segment file size exceeds memory size");
+        if (file_offset > file.size() || file_size > file.size() - file_offset)
+            return fail("ELF load segment points outside the imported file");
+        if (virtual_address > kMaxGuestAddress || memory_size > kMaxGuestAddress - virtual_address)
+            return fail("ELF load segment exceeds the prototype's 128 MiB guest address window");
+        if (memory_size == 0u) continue;
+
+        segments.push_back({file_offset, virtual_address, file_size, memory_size, flags});
+        required_memory = std::max(required_memory, virtual_address + memory_size);
+        if ((flags & 1u) != 0u && entry >= virtual_address &&
+            entry < virtual_address + memory_size) entry_is_executable = true;
+    }
+
+    if (segments.empty()) return fail("ELF contains no PT_LOAD segments");
+    if (!entry_is_executable || (entry & 3u) != 0u)
+        return fail("ELF entry point is not aligned inside an executable load segment");
+
+    memory_.assign(static_cast<std::size_t>(required_memory), 0u);
+    for (const auto& segment : segments) {
+        const auto destination = static_cast<std::size_t>(segment.virtual_address);
+        const auto source = static_cast<std::size_t>(segment.file_offset);
+        const auto length = static_cast<std::size_t>(segment.file_size);
+        if (length != 0u) std::memcpy(memory_.data() + destination, file.data() + source, length);
+        // memory_size - file_size is BSS and remains zero from assign().
+    }
+
+    state_ = {};
+    state_.pc = entry;
     return true;
 }
 

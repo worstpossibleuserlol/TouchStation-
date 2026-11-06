@@ -200,6 +200,10 @@ private fun TouchStationApp(preferences: SharedPreferences, lastControllerInput:
             game = game,
             preferences = preferences,
             controllerReady = controllerList.isNotEmpty(),
+            onBoot = {
+                context.startActivity(Intent(context, GameDisplayActivity::class.java).putExtra("game_uri", game.uri))
+                selectedGame = null
+            },
             onDismiss = { selectedGame = null },
             onRemove = {
                 games = games.filterNot { it.uri == game.uri }
@@ -223,7 +227,7 @@ private fun TopBrandHeader() {
         Spacer(Modifier.height(3.dp))
         Box(Modifier.fillMaxWidth().height(3.dp).background(Blue, RoundedCornerShape(4.dp)))
         Text("PS3", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Medium, letterSpacing = 8.sp)
-        Text("1.0.0 PRE-ALPHA", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp)
+        Text("1.0.0 ALPHA", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp)
     }
 }
 
@@ -243,7 +247,7 @@ private fun ColumnScope.LibraryPage(
     controllerCount: Int
 ) {
     Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
-        PageHeading("Game library", "Import your own PS3 disc images or executable files")
+        PageHeading("Game library", "Import a homebrew ELF to try the experimental PPU loader")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             StatusPill("$controllerCount controller${if (controllerCount == 1) "" else "s"}", if (controllerCount > 0) Good else Muted)
             StatusPill("PPU prototype", Blue)
@@ -276,7 +280,7 @@ private fun ColumnScope.LibraryPage(
             }
         }
         Spacer(Modifier.height(12.dp))
-        InfoPanel("Play status", "A PS3 guest cannot be launched yet. This build contains an early PPU instruction interpreter and frontend configuration, not a complete PS3 runtime.")
+        InfoPanel("Boot support", "The experimental boot path accepts plain big-endian ELF64 PowerPC64 homebrew files only. Retail SELF, encrypted executables, ISO/disc boot and firmware services are not supported.")
     }
 }
 
@@ -331,26 +335,26 @@ private fun ColumnScope.SettingsPage(preferences: SharedPreferences) {
                 }
             }
             item {
-                SettingsGroup("SPU · CELL", "SPU decoding and scheduling options are stored for the next runtime stage.") {
-                    ChoiceSetting(preferences, "spu_decoder", "SPU decoder", "Interpreter (planned)", listOf("Interpreter (planned)", "LLVM recompiler (planned)"))
+                SettingsGroup("SPU · CELL", "A small native SPU instruction subset now has 128 vector registers and 256 KiB local store. MFC/DMA and channel I/O are not implemented.") {
+                    ChoiceSetting(preferences, "spu_decoder", "SPU decoder", "Interpreter (subset)", listOf("Interpreter (subset)", "LLVM recompiler (planned)"))
                     ChoiceSetting(preferences, "spu_threads", "SPU thread count", "Auto", listOf("Auto", "1", "2", "4", "6"))
                     ChoiceSetting(preferences, "spu_block_size", "SPU block size", "Safe", listOf("Safe", "Balanced", "Large"))
-                    ToggleSetting(preferences, "spu_loop_detection", "SPU loop detection", true, "Configuration placeholder; no SPU engine is active.")
+                    ToggleSetting(preferences, "spu_loop_detection", "SPU loop detection", true, "Reserved for the future scheduler; not active in this interpreter subset.")
                 }
             }
             item {
-                SettingsGroup("GPU · RSX", "Graphics controls are configuration profiles; the RSX renderer is not included yet.") {
-                    ChoiceSetting(preferences, "gpu_backend", "Renderer", "Auto", listOf("Auto", "Vulkan", "OpenGL", "Software"))
+                SettingsGroup("GPU · RSX", "RSX FIFO packet parsing, method registers and a CPU clear/scissor reference path are implemented. Full 3D rendering, shaders and Vulkan/OpenGL presentation remain incomplete.") {
+                    ChoiceSetting(preferences, "gpu_backend", "Renderer", "CPU reference (prototype)", listOf("CPU reference (prototype)", "Vulkan (planned)", "OpenGL (planned)"))
                     ChoiceSetting(preferences, "resolution_scale", "Resolution scale", "100%", listOf("25%", "50%", "75%", "100%", "125%", "150%", "200%"))
                     ChoiceSetting(preferences, "shader_quality", "Shader precision", "Auto", listOf("Auto", "Strict", "Balanced", "Fast"))
-                    ToggleSetting(preferences, "shader_cache", "Shader cache", true, "Persist this preference for the future RSX renderer.")
-                    ToggleSetting(preferences, "async_shaders", "Asynchronous shader compilation", true, "Planned renderer optimization.")
+                    ToggleSetting(preferences, "shader_cache", "Shader cache", true, "Preference saved; shader compilation is not implemented.")
+                    ToggleSetting(preferences, "async_shaders", "Asynchronous shader compilation", true, "Planned; no RSX shader compiler is included.")
                     ToggleSetting(preferences, "vsync", "Vertical synchronization", true)
                     ChoiceSetting(preferences, "texture_filter", "Texture filtering", "Auto", listOf("Auto", "Nearest", "Linear", "Anisotropic 2x", "Anisotropic 4x", "Anisotropic 8x"))
                 }
             }
             item {
-                SettingsGroup("Display · layout & crop", "Set how a future game frame is fitted to your screen.") {
+                SettingsGroup("Display · layout & crop", "Choose the viewport fit and crop profile for when the RSX frame output is connected.") {
                     ChoiceSetting(preferences, "game_layout", "Game layout", "Keep aspect ratio", listOf("Keep aspect ratio", "Stretch to full screen", "Fit 4:3", "Fit 16:9", "Fill screen (crop)", "Integer scale", "Native resolution"))
                     ChoiceSetting(preferences, "game_rotation", "Screen orientation", "Landscape", listOf("Landscape", "Auto-rotate"))
                     ToggleSetting(preferences, "crop_enabled", "Enable display crop", false, "Crop is applied to the display viewport, not the source game file.")
@@ -407,19 +411,19 @@ private fun ColumnScope.SettingsPage(preferences: SharedPreferences) {
 @Composable
 private fun ColumnScope.SystemPage(ppuResult: String, onRunSelfTest: () -> Unit, controllerCount: Int) {
     Column(Modifier.weight(1f).fillMaxWidth().padding(16.dp)) {
-        PageHeading("System & diagnostics", "Runtime status and native CPU test")
-        InfoPanel("Runtime status", "PPU: limited PowerPC instruction interpreter prototype\nSPU: not implemented\nRSX: not implemented\nFirmware / LV1 / LV2: not implemented\nGame boot: unavailable")
+        PageHeading("System & diagnostics", "PPU · SPU · RSX self-tests and boot status")
+        InfoPanel("Runtime status", "PPU: partial PPC64 interpreter + guarded ELF64 loader\nSPU: instruction subset + 256 KiB local store\nRSX: FIFO/method parser + CPU clear/scissor reference\nNot implemented: full ISA, MFC/DMA, shaders, 3D rasterizer, audio, LV1/LV2, retail SELF and ISO boot")
         Spacer(Modifier.height(12.dp))
         InfoPanel("Connected controllers", "$controllerCount gamepad input device(s) currently detected by Android.")
         Spacer(Modifier.height(12.dp))
-        Button(onClick = onRunSelfTest, modifier = Modifier.fillMaxWidth()) { Text("Run PPU interpreter self-test") }
+        Button(onClick = onRunSelfTest, modifier = Modifier.fillMaxWidth()) { Text("Run PPU · SPU · RSX diagnostics") }
         Spacer(Modifier.height(8.dp))
         Card(colors = CardDefaults.cardColors(containerColor = Panel2), modifier = Modifier.fillMaxWidth()) {
-            Text(ppuResult, color = if (ppuResult.startsWith("PASS")) Good else Color(0xFFFFC36E),
+            Text(ppuResult, color = if (ppuResult.contains("FAIL")) Color(0xFFFFC36E) else if (ppuResult.contains("PASS")) Good else Muted,
                 fontSize = 12.sp, modifier = Modifier.padding(14.dp))
         }
         Spacer(Modifier.height(12.dp))
-        InfoPanel("Build identity", "TouchStation PS3 · 1.0.0 Pre-Alpha\nAndroid frontend · C++17 PPU prototype\nNo Sony firmware, BIOS or commercial game files are bundled.")
+        InfoPanel("Build identity", "TouchStation PS3 · 1.0.0 Alpha\nAndroid · C++17 CPU-side emulator prototypes\nNo Sony firmware, keys or commercial games are bundled.")
     }
 }
 
@@ -428,6 +432,7 @@ private fun GameProfileDialog(
     game: GameEntry,
     preferences: SharedPreferences,
     controllerReady: Boolean,
+    onBoot: () -> Unit,
     onDismiss: () -> Unit,
     onRemove: () -> Unit
 ) {
@@ -447,11 +452,14 @@ private fun GameProfileDialog(
                 SliderSetting(preferences, prefix + "crop_top", "Game crop top", 0f, 20f, "%")
                 SliderSetting(preferences, prefix + "crop_bottom", "Game crop bottom", 0f, 20f, "%")
                 Text(if (controllerReady) "Controller detected." else "Connect a controller before launching.", color = if (controllerReady) Good else Muted, fontSize = 11.sp)
-                Text("Game launching is not enabled until a complete PS3 runtime is available.", color = Muted, fontSize = 11.sp)
+                Text("Experimental boot: unencrypted, big-endian PPC64 ELF only. Retail SELF, ISO/disc images and firmware boot are not supported.", color = Muted, fontSize = 11.sp)
             }
         },
-        confirmButton = { Button(onClick = onDismiss) { Text("Done") } },
-        dismissButton = { OutlinedButton(onClick = onRemove) { Text("Remove game") } }
+        confirmButton = { Button(onClick = onBoot, enabled = controllerReady) { Text("Attempt ELF boot") } },
+        dismissButton = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onDismiss) { Text("Close") }
+            OutlinedButton(onClick = onRemove) { Text("Remove") }
+        } }
     )
 }
 

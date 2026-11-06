@@ -52,12 +52,12 @@ The universal APK contains the four ARM and x86 core libraries. Its actual size 
 
 ## Experimental PS3 edition
 
-TouchStation PS3 1.0.0 Pre-Alpha is developed separately in the ps3-pre-alpha branch under the :ps3-app module.
+TouchStation PS3 1.0.0 Alpha is developed separately in the ps3-alpha branch under the :ps3-app module.
 
-It adds an Android game-library frontend, Bluetooth pairing hand-off and external controller detection, no on-screen controls, persistent CPU / SPU / RSX / display / crop / audio / optimization settings, per-game profiles, and a limited native PowerPC 64-bit PPU interpreter prototype.
+It adds a limited PPU interpreter and guarded PPC64 ELF loader, a subset SPU interpreter, an RSX FIFO/method processor with a CPU clear/scissor reference path, Bluetooth pairing, physical controller detection, no-touch-control display, and extensive display/crop/per-game settings.
 
-**It is not yet a playable PS3 emulator.** It cannot boot PS3 firmware or commercial games. SPU, RSX, firmware / hypervisor services, storage emulation, audio, full PPU ISA support and guest controller mapping remain unimplemented. Many graphics and optimization controls are saved configuration profiles for future runtime components and are labelled as inactive.
+**This is still not a complete or broadly playable PS3 emulator.** The Alpha does not implement the full Cell CPU, SPU MFC/DMA, RSX 3D rendering, audio, LV1/LV2 firmware services, encrypted retail SELF support or ISO boot. The ELF boot attempt only accepts a narrow unencrypted big-endian PPC64 ELF subset.
 
-Read [README-PS3-PRE-ALPHA.md](README-PS3-PRE-ALPHA.md) for the exact implementation status and build instructions. The existing PS1 application module remains separate.
+Read [README-PS3-ALPHA.md](README-PS3-ALPHA.md) for the exact implementation status and build instructions. The existing PS1 application module remains separate.
 
 No Sony firmware, BIOS, encryption keys or commercial games are bundled. Use only files you are legally entitled to use.

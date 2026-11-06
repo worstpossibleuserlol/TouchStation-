@@ -11,8 +11,8 @@ android {
         applicationId = "com.touchstation.ps3"
         minSdk = 26
         targetSdk = 35
-        versionCode = 100
-        versionName = "1.0.0 Pre-Alpha"
+        versionCode = 101
+        versionName = "1.0.0 Alpha"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86") }
         externalNativeBuild { cmake { cppFlags += "-std=c++17" } }
     }

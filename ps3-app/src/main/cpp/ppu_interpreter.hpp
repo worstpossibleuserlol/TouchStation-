@@ -42,6 +42,7 @@ public:
     bool read64(std::uint64_t address, std::uint64_t& value) const;
 
     bool loadWords(const std::vector<std::uint32_t>& words, std::uint64_t address = 0);
+    bool loadPpc64Elf(const std::vector<std::uint8_t>& file);
     bool step();
     std::uint64_t run(std::uint64_t instruction_budget);
 
