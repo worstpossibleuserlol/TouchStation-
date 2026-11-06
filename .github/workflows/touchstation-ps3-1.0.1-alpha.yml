@@ -50,9 +50,10 @@ jobs:
         run: |
           APK=ps3-app/build/outputs/apk/debug/ps3-app-debug.apk
           test -s "$APK"
+          mkdir -p build
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee build/apk-badging.txt
-          grep -q 'application-icon' build/apk-badging.txt
-          grep -q 'TouchStation PS3' build/apk-badging.txt
+          grep -q "application-icon.*res/mipmap-anydpi-v26/ic_launcher.xml" build/apk-badging.txt
+          grep -q "application: label='TouchStation PS3'" build/apk-badging.txt
       - name: Report APK size and SHA-256
         run: |
           APK=ps3-app/build/outputs/apk/debug/ps3-app-debug.apk
